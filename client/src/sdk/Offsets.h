@@ -64,6 +64,7 @@ namespace Offsets {
 
     namespace Level {
         namespace VIndex {
+            constexpr size_t getRuntimeActorList = 325;  // std::vector<Actor*> () const - 3 slots before getPacketSender in ILevel.h
             constexpr size_t getPacketSender = 328;  // PacketSender* () - must be called on the game thread
         }
     }

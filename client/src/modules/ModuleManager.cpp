@@ -6,6 +6,7 @@
 #include "core/Logger.h"
 #include "Aimbox.h"
 #include "InventoryView.h"
+#include "AutoTotem.h"
 
 namespace {
     std::vector<std::unique_ptr<Module>> g_modules;
@@ -21,6 +22,7 @@ std::vector<std::unique_ptr<Module>>& ModuleManager::modules() { return g_module
 void ModuleManager::init() {
     g_modules.push_back(std::make_unique<Aimbox>());
     g_modules.push_back(std::make_unique<InventoryView>());
+    g_modules.push_back(std::make_unique<AutoTotem>());
     g_modules.push_back(std::make_unique<Xray>());
     g_modules.push_back(std::make_unique<Speed>());
     g_modules.push_back(std::make_unique<Fly>());   // after Speed: while both are on, Fly wins

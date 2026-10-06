@@ -44,11 +44,33 @@ namespace Offsets {
         constexpr size_t stateVector = 0x218;  // BuiltInActorComponents::mStateVectorComponent* (pos, posPrev, posDelta)
         constexpr size_t aabbShape   = 0x220;  // BuiltInActorComponents::mAABBShapeComponent*   (AABB, width, height)
         constexpr size_t rotation    = 0x228;  // BuiltInActorComponents::mActorRotationComponent* (pitch, yaw, prev pitch, prev yaw)
+        constexpr size_t entityContext   = 0x08;   // EntityContext (what ActorEquipment::getHandContainer takes)
+        constexpr size_t playerInventory = 0x5B8;  // Player::mInventory (std::unique_ptr<PlayerInventory>) - players only
         namespace VIndex {                     // virtual function slots (same order as Actor.h)
             constexpr size_t teleportTo     = 21;  // (Vec3 const& pos, bool stopRiding, int cause, int sourceType, bool keepVelocity)
             constexpr size_t normalTick     = 24;  // called once per game tick on the game thread
             constexpr size_t getCarriedItem = 77;  // ItemStack const& () - the selected hotbar slot inside the inventory
+            constexpr size_t setOffhandSlot = 78;  // (ItemStack const&) - copies the stack into the off hand
+            constexpr size_t getEquippedTotem = 79;  // ItemStack const& () - starts with a call to ActorEquipment::getHandContainer
         }
+    }
+
+    // PlayerInventory: two listener vtables, then mSelected, mInfiniteItem (0x98), mSelectedContainerId, mInventory
+    namespace PlayerInventory {
+        constexpr size_t selected  = 0x10;   // int, hotbar slot 0..8
+        constexpr size_t container = 0xB8;   // std::unique_ptr<Inventory> (36 slots: 0..8 hotbar, 9..35 main)
+    }
+
+    // Container = any list of item slots (the inventory, the two hands, chests, ...).
+    // getItem is confirmed: getEquippedTotem calls hands+0x38 (slot 7) with slot 1 (= off hand).
+    namespace Container {
+        namespace VIndex {
+            constexpr size_t getItem          = 7;   // ItemStack const& (int slot)
+            constexpr size_t setItem          = 12;  // void (int slot, ItemStack const&) - copies the stack
+            constexpr size_t removeItem       = 14;  // void (int slot, int count)
+            constexpr size_t getContainerSize = 20;  // int ()
+        }
+        constexpr int offhandSlot = 1;   // in the hand container (0 = main hand)
     }
 
     // ItemStack (= ItemStackBase + net id), 0x98 bytes, stored by value in the inventory's vector

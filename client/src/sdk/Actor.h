@@ -37,6 +37,26 @@ public:
     uint8_t& count()      { return at<uint8_t>(Offsets::ItemStack::count); }
     uint8_t maxStackSize() { return item()[Offsets::Item::maxStackSize]; }
     const char* name()    { return reinterpret_cast<MsvcString*>(item() + Offsets::Item::fullName)->c_str(); }
+    bool isEmpty()        { return !item() || count() == 0; }
+};
+
+// A list of item slots: the player inventory, the two hands, chests, ...
+// Everything that changes slots goes through the game's own functions, so the
+// container tells its listeners (and the server tells the client) about it.
+class Container {
+public:
+    ItemStack* getItem(int slot) {
+        return Memory::callVirtual<ItemStack*, int>(this, Offsets::Container::VIndex::getItem, slot);
+    }
+    void setItem(int slot, const ItemStack& item) {   // copies item
+        Memory::callVirtual<void, int, const ItemStack&>(this, Offsets::Container::VIndex::setItem, slot, item);
+    }
+    void removeItem(int slot, int count) {
+        Memory::callVirtual<void, int, int>(this, Offsets::Container::VIndex::removeItem, slot, count);
+    }
+    int size() {
+        return Memory::callVirtual<int>(this, Offsets::Container::VIndex::getContainerSize);
+    }
 };
 
 class Actor {
@@ -56,6 +76,11 @@ public:
     // to it changes the real stack (an empty hand returns a shared empty stack - check item()).
     ItemStack* getCarriedItem() {
         return Memory::callVirtual<ItemStack*>(this, Offsets::Actor::VIndex::getCarriedItem);
+    }
+
+    // Copies item into the off hand (the game's own setter, like /replaceitem)
+    void setOffhandSlot(const ItemStack& item) {
+        Memory::callVirtual<void, const ItemStack&>(this, Offsets::Actor::VIndex::setOffhandSlot, item);
     }
 
     // Same call the /tp command ends up in. pos uses the same space as StateVectorComponent::pos (eye level).

@@ -4,6 +4,7 @@
 #include "Xray.h"
 #include "sdk/PlayerTick.h"
 #include "core/Logger.h"
+#include "Aimbox.h"
 
 namespace {
     std::vector<std::unique_ptr<Module>> g_modules;
@@ -17,6 +18,7 @@ namespace {
 std::vector<std::unique_ptr<Module>>& ModuleManager::modules() { return g_modules; }
 
 void ModuleManager::init() {
+    g_modules.push_back(std::make_unique<Aimbox>());
     g_modules.push_back(std::make_unique<Xray>());
     g_modules.push_back(std::make_unique<Speed>());
     g_modules.push_back(std::make_unique<Fly>());   // after Speed: while both are on, Fly wins
@@ -33,4 +35,10 @@ void ModuleManager::shutdown() {
 void ModuleManager::onKey(int vk) {
     for (auto& m : g_modules)
         if (m->key() == vk) m->toggle();
+}
+
+// レンダーの定義
+void ModuleManager::render() {
+    for (auto& m : g_modules)
+        if (m->isEnabled()) m->onRender();
 }

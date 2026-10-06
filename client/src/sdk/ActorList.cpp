@@ -26,7 +26,7 @@ std::vector<Actor*> ActorList::get(Actor& player) {
         void ** vtable = *static_cast<void***>(level);
         LOG("Level vtable exe+%#llx, getRuntimeActorList = exe +%#llx",
             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(vtable) - Memory::moduleBase()),
-            static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(vtable[Offsets::Level::VIndex::getRuntimeActorList]) - Memory::moduleBase()));)
+            static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(vtable[Offsets::Level::VIndex::getRuntimeActorList]) - Memory::moduleBase()));
     }
 
     RawVector raw{};

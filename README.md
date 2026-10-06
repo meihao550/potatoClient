@@ -94,6 +94,12 @@ set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common
 - **マルチサーバーでも使える（OP 権限が必要）**: サーバーへ `/enchant @s <名前> <レベル>` をチャットと同じ方法で送る。手持ちのアイテムに付けられるものだけを送るので、`enchant all` でもエラーがあふれない。レベルはサーバーの `/enchant` に合わせて最大レベルまで
 - くわしい使い方は **[docs/ENCHANT.md](docs/ENCHANT.md)（エンチャントの付け方 説明書）**
 
+### 6.6 インベントリ系
+| モジュール | 動作 |
+|---|---|
+| Inventory | インベントリ 36 マスとオフハンドを画面右上に表示。選択中のホットバーは黄色。メニューを開いている間はウィンドウを動かせて、マスにカーソルを当てると名前と個数が出る（マルチでも OK） |
+| AutoTotem | オフハンドに不死のトーテムがなく、インベントリにあれば自動でオフハンドへ移す。オフハンドに別のものがあれば空きマスへ退避（「設定」で OFF にできる）。**シングルプレイ専用** |
+
 ### 7. アンロードと再ビルド
 - ゲーム内で **End** を押すとアンロードされ、コンソール窓が閉じます（Xray が ON なら自動で元に戻します）
 - インジェクターは DLL のコピー（`client_loaded_<時刻>.dll`）を読み込ませます。なので、**注入中でもビルドできます**。古いコピーは次の Inject のときに自動で削除されます
@@ -170,6 +176,11 @@ MinHook でフックします。ゲームが毎フレーム Present するたび
   - パケットはコマンド文字列のバッファを引き取るが、それは DLL 側の CRT で確保したもの。ゲームに解放させないよう、送ったあとに取り返してからパケットを破棄する
 - 説明書: [docs/ENCHANT.md](docs/ENCHANT.md)
 
+### 9. インベントリ / AutoTotem — `client/src/sdk/PlayerItems.cpp`, `modules/InventoryView.cpp`, `modules/AutoTotem.cpp`
+- **インベントリ**: `Actor+0x5B8` の PlayerInventory → `+0xB8` の Inventory（Container、36 スロット: 0..8 ホットバー、9..35 その他）。`getCarriedItem`(77) と同じ経路。Container の仮想関数は `getItem`(7) / `setItem`(12) / `removeItem`(14) / `getContainerSize`(20)
+- **オフハンド**: インベントリではなく、`ActorEquipment::getHandContainer(EntityContext&)` が返す 2 スロットの「手のコンテナ」の 1 番。この関数にはシグネチャがないので、`Actor::getEquippedTotem`(79) の先頭の `mov rsi,rcx / add rcx,8 / call ...` から呼び先を実行時に読む（`Actor+8` が EntityContext）
+- **AutoTotem**: クライアント側のコピーで「オフハンドにトーテムがない & インベントリにある」を判定してから、サーバースレッドで ServerPlayer に対して `setItem`（オフハンドの物を退避）→ `setOffhandSlot`(78) → `removeItem` を呼ぶ。ゲームの関数で動かすので、dupe のような手動の同期はいらない
+
 ## ゲームが更新されたら (リバースエンジニアリングの手順)
 オフセットは `client/src/sdk/Offsets.h` に集約してあります。
 1. ゲームを起動してワールドに入る
@@ -188,7 +199,7 @@ client/src/
   core/                       ログ, パターンスキャン, MinHook ラッパ
   render/                     Present フック, D3D12 / D3D11 の ImGui 描画
   gui/                        メニュー, WndProc, 入力フック
-  modules/                    Module 基底, ModuleManager, Xray, Fly, Speed
+  modules/                    Module 基底, ModuleManager, Xray, Fly, Speed, Aimbox, Inventory, AutoTotem
   commands/                   Command 基底, CommandManager, up / vclip / hclip / tp / dupe / enchant / help
   sdk/                        ゲームの構造体 (オフセット, BlockType, Actor, レジストリ探索, プレイヤーの tick フック)
 ```

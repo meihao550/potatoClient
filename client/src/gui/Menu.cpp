@@ -106,6 +106,7 @@ void Menu::closeCommandBar(const char* reason) {
 }
 
 void Menu::render() {
+    ModuleManager::render();
     renderCommandBar();
     renderLastMessage();
     if (!open) return;

@@ -1,4 +1,4 @@
-# LearnClient — 学習用 Minecraft Bedrock クライアント
+# PotatoClient — 学習用 Minecraft Bedrock クライアント
 
 Horion 風の内部 (DLL) クライアントを一から作って、チートクライアントの仕組みを学ぶためのプロジェクトです。
 対象: **Minecraft Bedrock 1.26.52 (GDK 版 / `Minecraft.Windows.exe`)**

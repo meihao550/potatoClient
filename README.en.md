@@ -150,3 +150,8 @@ We create our own dummy D3D12 device and swap chain, read the addresses of
 `IDXGISwapChain::Present` (8) / `ResizeBuffers` (13) / `ID3D12CommandQueue::ExecuteCommandLists` (10) from their COM vtables,
 and hook them with MinHook. ImGui is drawn every time the game calls Present.
 
+### 4. Input — `client/src/gui/Input.cpp`, `GameInputHook.cpp`
+- The WndProc is subclassed to catch key presses (Insert / End / key binds)
+- This GDK build reads mouse and keyboard through **GameInput v3**, so
+  `IGameInputReading::GetMouseState` (14) / `GetKeyState` (13) are hooked. While the menu is open, the camera position is frozen and keys are reported as "not pressed"
+

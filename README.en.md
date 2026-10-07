@@ -29,3 +29,13 @@ After the first build, only the `--build` line needs to be run again when you ch
 
 > The CMake project is named `LearnClient`, and the injector's docstring still uses that name. It is the same project as PotatoClient.
 
+#### Building with Docker (optional)
+If you only want the DLL and don't want to install Visual Studio, you can use the bundled `Dockerfile`. Docker must be in **Windows containers** mode. The container only builds the DLL: injecting it into the game cannot be done from a container.
+```
+docker build -t potatoclient-build .
+docker create --name potatoclient-out potatoclient-build
+docker cp potatoclient-out:C:\out .\out
+docker rm potatoclient-out
+```
+This produces `out\client.dll`. On Windows 10, add `--build-arg WINDOWS_VERSION=ltsc2019` or build with `--isolation=hyperv`.
+

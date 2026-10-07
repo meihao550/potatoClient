@@ -7,7 +7,7 @@
 // inventory is on the built-in server).
 class AutoTotem : public Module {
 public:
-    AutoTotem() : Module("AutoTotem", "不死のトーテムを自動でオフハンドに持つ (シングルプレイ専用)", 0) {
+    AutoTotem() : Module("AutoTotem", "不死のトーテムを自動でオフハンドに持つ (シングルプレイ専用)", Category::Player, 0) {
         addSettings({ &m_swapOffhand });
     }
     void onTick(Actor& player) override;

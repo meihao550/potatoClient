@@ -8,7 +8,7 @@
 // thread (onTick) and drawn on the render thread (onRender) from a copy.
 class Aimbox : public Module {
 public:
-    Aimbox() : Module("Aimbox", "モブ・プレイヤーの当たり判定を箱で表示", 'B') {
+    Aimbox() : Module("Aimbox", "モブ・プレイヤーの当たり判定を箱で表示", Category::Render, 'B') {
         addSettings({ &m_fov, &m_range, &m_skipSmall, &m_color });
     }
     void onTick(Actor& player) override;

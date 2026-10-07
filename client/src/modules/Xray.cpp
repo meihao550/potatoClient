@@ -33,7 +33,7 @@ namespace {
 }
 
 Xray::Xray()
-    : Module("Xray", "選んだ鉱石以外のブロックを透明にする", 'X'),
+    : Module("Xray", "選んだ鉱石以外のブロックを透明にする", Category::Render, 'X'),
       m_groups{
           { "ダイヤモンド",     { "diamond_ore" },                    true },
           { "エメラルド",       { "emerald_ore" },                    true },

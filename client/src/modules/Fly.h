@@ -4,8 +4,9 @@
 // Creative-like flight: WASD moves, Space goes up, Shift goes down, no keys = hover
 class Fly : public Module {
 public:
-    Fly() : Module("Fly", "飛行 (WASD: 移動 / Space: 上昇 / Shift: 下降 / 何も押さない: その場で停止)", 'F') {
+    Fly() : Module("Fly", "飛行 (WASD: 移動 / Space: 上昇 / Shift: 下降 / 何も押さない: その場で停止)", Category::Movement, 'F') {
         addSettings({ &m_speed, &m_verticalSpeed, &m_antiKick });
+        setTickPriority(1);   // after Speed: while both are on, Fly's velocity wins
     }
     void onTick(Actor& player) override;
 

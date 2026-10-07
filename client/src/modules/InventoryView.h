@@ -7,7 +7,7 @@
 // Read on the game thread (onTick), drawn on the render thread (onRender) from a copy.
 class InventoryView : public Module {
 public:
-    InventoryView() : Module("Inventory", "インベントリの中身を画面に表示", 0) {
+    InventoryView() : Module("Inventory", "インベントリの中身を画面に表示", Category::Player, 0) {
         addSettings({ &m_cellWidth, &m_showOffhand });
     }
     void onTick(Actor& player) override;

@@ -9,10 +9,14 @@
 
 class Actor;
 
+// Groups in the menu (one tab each), in tab order
+enum class Category { Movement, Render, Player };
+const char* categoryName(Category category);   // the tab label
+
 class Module {
 public:
-    Module(std::string name, std::string description, int key)
-        : m_name(std::move(name)), m_description(std::move(description)), m_key(key) {}
+    Module(std::string name, std::string description, Category category, int key)
+        : m_name(std::move(name)), m_description(std::move(description)), m_category(category), m_key(key) {}
     virtual ~Module() = default;
 
     virtual bool onEnable() { return true; }   // return false to refuse enabling
@@ -40,6 +44,9 @@ public:
     bool isEnabled() const { return m_enabled; }
     const std::string& name() const { return m_name; }
     const std::string& description() const { return m_description; }
+    Category category() const { return m_category; }
+    // Order of onTick among enabled modules: higher runs later, so what it writes wins
+    int tickPriority() const { return m_tickPriority; }
     int key() const { return m_key; }
     void setKey(int vk) { m_key = vk; }
     const std::vector<Setting*>& settings() const { return m_settings; }
@@ -52,6 +59,7 @@ protected:
     // Call in the constructor with the module's Setting members, in menu order
     void addSettings(std::initializer_list<Setting*> settings) { m_settings.insert(m_settings.end(), settings); }
     void renderRegisteredSettings() { for (Setting* s : m_settings) s->render(); }
+    void setTickPriority(int priority) { m_tickPriority = priority; }
 
 private:
     void switchTo(bool on) {
@@ -62,6 +70,8 @@ private:
 
     std::string m_name;
     std::string m_description;
+    Category m_category;
+    int m_tickPriority = 0;
     std::atomic<int> m_key = 0;          // virtual-key code, 0 = unbound
     std::atomic<bool> m_enabled = false;   // read every tick / frame without the lock
     std::mutex m_switchMutex;

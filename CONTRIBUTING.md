@@ -65,3 +65,18 @@ There are no automated tests. The game itself is the test environment.
 If the game crashes, the faulting offset in `client.dll` (Event Viewer → Windows Logs →
 Application) plus `client.pdb` tells you the source line.
 
+## Code style
+
+Follow the surrounding code. In short:
+
+- C++20, 4-space indentation, braces on the same line, `#pragma once` in headers.
+- PascalCase for classes, files and namespaces. camelCase for functions.
+- `m_` for members, `g_` for file-local globals (inside an anonymous namespace), `hk` / `o` for hook detours / originals.
+- **Comments in English. User-facing strings (menu, descriptions, command messages) in Japanese.**
+- Every offset, vtable index and signature goes in `client/src/sdk/Offsets.h`, with a comment that
+  says what it is and how it was found. No magic numbers elsewhere.
+- Touch game objects only on the game threads (`Module::onTick` or `PlayerTick::run*`), never
+  from the render thread. See the threading section of [READING_THE_CODE.md](docs/READING_THE_CODE.md#4-threading-model).
+
+Details and examples are in [READING_THE_CODE.md](docs/READING_THE_CODE.md#7-naming-and-style-conventions).
+

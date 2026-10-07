@@ -65,3 +65,13 @@ Reading the menu:
 - **「キー: X」 (Key: X) button**: click it, then press any key to rebind. Press Esc to leave it unbound
 - **「設定」 (Settings)**: expands the module's own settings
 
+### 5. Using Xray
+1. Open the menu with Insert and tick Xray (or press X).
+2. Open Settings and choose what to show:
+   - **Ores to show**: toggle diamond, iron, gold and so on individually. There are also "all on" / "all off" buttons
+   - **Extra blocks**: type part of a block name and click "add" (e.g. `amethyst` shows everything amethyst-related). `x` removes an entry
+   - **Let light through**: when on, underground ores are not darkened
+3. **Go to Settings → Video and toggle "Smooth Lighting" off and back on once**, so every chunk picks up the change.
+   - Changing only the render distance rebuilds just the chunks that newly come into range, so only some of them become transparent
+4. After turning Xray off, toggle Smooth Lighting the same way to get the normal look back.
+

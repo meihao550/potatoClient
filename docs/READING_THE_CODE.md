@@ -269,3 +269,17 @@ command messages) are in Japanese. Keep that split.
    resolves the signature and an `available()` check).
 3. If it needs `init()`, call it from `dllmain.cpp` before `CommandManager::init()`.
 
+## 9. When the game updates
+
+After a Minecraft update, offsets and signatures usually break. Signatures that are not found are
+logged to `client.log` (for example `LocalPlayer vtable signature not found`), so start there.
+
+1. Enter a world and run `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` to dump the
+   decrypted exe.
+2. Open the dump in Ghidra or IDA. Use the comments in `Offsets.h` (they describe the instructions
+   around each signature and where each offset comes from) to find the new values.
+3. Cross-check struct layouts against the [LeviLamina](https://github.com/LiteLDev/LeviLamina) BDS
+   headers, then confirm with live memory reads before changing `Offsets.h`.
+
+The full procedure is in [README.en.md](../README.en.md#when-the-game-updates-reverse-engineering-procedure).
+

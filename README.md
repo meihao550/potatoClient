@@ -25,6 +25,16 @@ set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common
 `build\Release\client.dll` ができれば成功です（`client.pdb` はクラッシュ解析用）。
 2 回目以降はソースを変えたら `--build` の行だけ実行すれば OK です。
 
+#### Docker でビルドする（任意）
+Visual Studio を入れずに DLL だけ作りたいときは、同梱の `Dockerfile` が使えます。Docker を **Windows コンテナ** モードにしておく必要があります（ゲームへの注入はコンテナではできません。ビルド専用です）。
+```
+docker build -t potatoclient-build .
+docker create --name potatoclient-out potatoclient-build
+docker cp potatoclient-out:C:\out .\out
+docker rm potatoclient-out
+```
+`out\client.dll` ができます。Windows 10 では `--build-arg WINDOWS_VERSION=ltsc2019` を付けるか `--isolation=hyperv` でビルドしてください。
+
 ### 3. インジェクト
 1. マイクラを起動し、**シングルプレイのワールドに入る**（Xray のブロック一覧はワールドに入ってから作られます）
 2. 別のウィンドウで次を実行

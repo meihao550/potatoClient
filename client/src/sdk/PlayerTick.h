@@ -12,6 +12,9 @@ namespace PlayerTick {
     // True while players of that side are ticking (Client: in a world and not paused,
     // Server: the world runs on this PC, i.e. single-player / hosting)
     bool ticking(Side side);
+    // True if that side's normalTick hook is installed (its signature was found).
+    // Modules that need onTick are unavailable without the client hook.
+    bool hooked(Side side);
     // Runs fn during the next tick of a player on that side, on that side's thread.
     // fn returns false to say "not this player" - it is then offered to the next
     // player that ticks, and dropped after a couple of seconds.

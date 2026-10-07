@@ -1,5 +1,6 @@
 #pragma once
 #include "Module.h"
+#include "sdk/PlayerTick.h"
 #include <atomic>
 
 // Keeps a Totem of Undying in the off hand: when the off hand has none and the
@@ -11,6 +12,10 @@ public:
         addSettings({ &m_swapOffhand });
     }
     void onTick(Actor& player) override;
+    // Reads on the client tick, moves the items on the server tick
+    bool isAvailable() const override {
+        return PlayerTick::hooked(PlayerTick::Side::Client) && PlayerTick::hooked(PlayerTick::Side::Server);
+    }
     void renderSettings() override;
 
 private:

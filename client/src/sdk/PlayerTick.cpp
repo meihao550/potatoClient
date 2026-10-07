@@ -100,6 +100,8 @@ bool PlayerTick::init() {
     return client && server;
 }
 
+bool PlayerTick::hooked(Side side) { return get(side).original != nullptr; }
+
 bool PlayerTick::ticking(Side side) {
     const auto& s = get(side);
     return s.original && GetTickCount64() - s.lastTick < 1000;

@@ -16,9 +16,9 @@ namespace {
     bool initAll() {
         if (!Hooks::init()) return false;
         // Each step logs its own details; a missing signature only disables the features that need it
-        ModuleManager::init();   // module hooks (Xray, ...)
         if (!PlayerTick::init())     // normalTick hooks = our way onto the client/server threads
             LOG("warning: player tick hooks incomplete - modules and commands that need the game thread won't run");
+        ModuleManager::init();       // after PlayerTick: availability and the saved on/off state depend on it
         if (!Enchant::init())        // EnchantUtils::applyEnchant for the enchant command
             LOG("warning: enchant is unavailable");
         if (!CommandSender::init())  // CommandRequestPacket: send /commands to a remote server

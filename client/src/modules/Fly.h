@@ -1,5 +1,6 @@
 #pragma once
 #include "Module.h"
+#include "sdk/PlayerTick.h"
 
 // Creative-like flight: WASD moves, Space goes up, Shift goes down, no keys = hover
 class Fly : public Module {
@@ -9,6 +10,7 @@ public:
         setTickPriority(1);   // after Speed: while both are on, Fly's velocity wins
     }
     void onTick(Actor& player) override;
+    bool isAvailable() const override { return PlayerTick::hooked(PlayerTick::Side::Client); }
 
 private:
     // blocks per tick (x20 = blocks per second)

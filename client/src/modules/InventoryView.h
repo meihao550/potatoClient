@@ -1,5 +1,6 @@
 #pragma once
 #include "Module.h"
+#include "sdk/PlayerTick.h"
 #include <mutex>
 #include <string>
 
@@ -11,6 +12,7 @@ public:
         addSettings({ &m_cellWidth, &m_showOffhand });
     }
     void onTick(Actor& player) override;
+    bool isAvailable() const override { return PlayerTick::hooked(PlayerTick::Side::Client); }
     void onRender() override;
     void onDisable() override;
 

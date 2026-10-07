@@ -166,3 +166,18 @@ class Module {
 
 There is no config file. Settings are plain member fields and reset when the DLL is reloaded.
 
+### Commands (`commands/Command.h`)
+
+```cpp
+class Command {
+    Command(std::string name, std::string description);   // name in lower case
+    virtual void execute(const std::vector<std::string>& args) = 0;   // args[0] = the name
+};
+```
+
+- **Registration**: `CommandManager::init()` (`commands/CommandManager.cpp:37-45`).
+- **Parsing**: `CommandManager::execute(line)` strips a leading `.` or spaces, splits on whitespace,
+  lower-cases the first word and finds the matching command. `help` lists all of them.
+- **Threading**: `execute` runs on the render thread, so use `PlayerTick::run*` for anything
+  that touches the game, and `CommandManager::print` to report.
+

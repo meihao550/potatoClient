@@ -121,3 +121,17 @@ In single-player, the built-in server's ServerPlayer is moved through the same p
 - The injector loads a copy of the DLL (`client_loaded_<timestamp>.dll`), so **you can rebuild while it is injected**. Old copies are deleted automatically on the next inject
 - To try a new build: unload with End, then inject again
 
+### 8. Troubleshooting
+| Symptom | Fix |
+|---|---|
+| "Minecraft.Windows.exe is not running" | Start Minecraft first |
+| "LoadLibraryW failed" | Check the DLL path. Make sure it is a 64-bit Release build |
+| Insert doesn't open the menu | Check that the console shows `renderer api = D3D12`. If not, move around in the world a bit so it renders |
+| Xray doesn't stay ticked | Turn it on after entering a world (the console says the block list was not found) |
+| Xray only affects some chunks | Toggle Smooth Lighting once |
+| `up` says to use it after entering a world | Player ticks stop while the game is paused, so go back to the game first. Check that the log shows `hook LocalPlayer::normalTick` and `hook ServerPlayer::normalTick` with `MH_OK`. It doesn't work on servers (Realms, etc.) |
+| The game crashed | Check the last line of `build\Release\client.log` and the error under Event Viewer → Windows Logs → Application (the faulting offset in `client.dll`). `client.pdb` maps that offset to a source line |
+| It stopped working after a game update | The offsets have changed. See "When the game updates" below |
+
+Log: `build\Release\client.log` (the console window shows the same output).
+

@@ -155,3 +155,12 @@ and hook them with MinHook. ImGui is drawn every time the game calls Present.
 - This GDK build reads mouse and keyboard through **GameInput v3**, so
   `IGameInputReading::GetMouseState` (14) / `GetKeyState` (13) are hooked. While the menu is open, the camera position is frozen and keys are reported as "not pressed"
 
+### 5. Xray — `client/src/modules/Xray.cpp`, `client/src/sdk/`
+Instead of hooking functions, this **rewrites the game's data**.
+- Every kind of block has a `BlockType` object, stored in the `std::map` of the `BlockTypeRegistry`
+- The registry is found without a signature: we scan the exe's `.data` section for a `std::map` whose names start with `minecraft:` and validate it (`BlockRegistry.cpp`)
+- `minecraft:barrier` is already "invisible and doesn't hide its neighbours' faces", so every hidden block gets the same values as barrier
+  - `BlockType`: `mRenderLayer=Barrier(14)`, `mIsOpaqueFullBlock=false`, `mTranslucency=1`, `mLightBlock=0`
+  - Each `Block` (state): the cached `mIsOpaqueFullBlock`, `mLight` and occlusion shapes (`occlusionShapes`) are set to 0
+- The original values are saved once and restored exactly when Xray is turned off
+

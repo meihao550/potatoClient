@@ -39,3 +39,15 @@ docker rm potatoclient-out
 ```
 This produces `out\client.dll`. On Windows 10, add `--build-arg WINDOWS_VERSION=ltsc2019` or build with `--isolation=hyperv`.
 
+### 3. Inject
+1. Start Minecraft and **enter a single-player world** (Xray's block list is only created once you are in a world).
+2. In another window, run:
+   ```
+   python injector\injector.py
+   ```
+3. Click the **Inject** button in the window that opens.
+   - The DLL path defaults to `build\Release\client.dll`. Use the browse button (「参照...」) to pick a different DLL.
+4. It worked if the injector shows 「Inject 成功!」 ("Inject succeeded!") and a console window opens next to the game printing `Injected!`.
+
+> The in-game UI (menu, module descriptions, command messages) is in Japanese.
+

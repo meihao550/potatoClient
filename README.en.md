@@ -83,3 +83,30 @@ Reading the menu:
    - In the Nether the bedrock ceiling is the highest block, so you end up above the ceiling
    - `help` lists the commands, Esc closes the bar
 
+### 6.5 Movement (also works on multiplayer servers)
+In single-player, the built-in server's ServerPlayer is moved through the same path as `/tp`. **On a remote server, the LocalPlayer's position and velocity are written directly.** The client sends its own position to the server every tick, so this goes through on servers without movement checks.
+
+| Command | Action |
+|---|---|
+| `up` | Onto the highest block directly above you (multiplayer OK) |
+| `vclip 10` / `vclip -5` | Move n blocks straight up / down (through walls) |
+| `hclip 5` | Move n blocks in the direction you are facing |
+| `tp 100 64 -20` / `tp ~ ~20 ~` | Move to coordinates (feet position; `~` means relative) |
+
+| Module | Action |
+|---|---|
+| Fly (F) | WASD to move, Space to go up, Shift to go down, no keys to hover. Speed and anti-kick in Settings |
+| Speed | While WASD is held, your horizontal speed is set to the configured value |
+
+- Keys are read directly with `GetAsyncKeyState`, so they are **fixed to WASD / Space / Shift** (the game's key bindings are ignored). They are ignored while the menu or command bar is open, and while the game is not in the foreground
+- Turning Fly off makes you fall normally and take fall damage. Land first, then turn it off
+- If the server has movement checks (anti-cheat), large teleports and very fast movement get pulled back. Lower the speed or move in shorter steps
+
+`dupe` — raises the held item's count to the maximum stack size (64 / 16). `dupe 10` sets it to 10
+- Items that don't stack, such as tools and armor, can't be duplicated
+- Like UP, this is for your own world only
+
+`enchant` — enchants the weapon or armor in your hand (`enchant sharpness` / `enchant all` / `enchant list`)
+- **Also works on multiplayer servers (operator permission required)**: it sends `/enchant @s <name> <level>` to the server the same way chat does. Only enchantments that can be applied to the held item are sent, so `enchant all` doesn't flood you with errors. Levels go up to the maximum the server's `/enchant` allows
+- Full manual: **[docs/ENCHANT.md](docs/ENCHANT.md)** (Japanese only)
+

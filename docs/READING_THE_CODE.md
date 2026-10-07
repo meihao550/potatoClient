@@ -249,3 +249,15 @@ command messages) are in Japanese. Keep that split.
    `ModuleManager::init()`.
 4. Rebuild. CMake picks up new `.cpp` files automatically (`file(GLOB_RECURSE ... CONFIGURE_DEPENDS)`).
 
+### Adding a command
+
+1. Declare a class deriving from `Command` (see `commands/UpCommand.h`).
+2. In `execute`, validate `args`, then schedule the actual work:
+   ```cpp
+   PlayerTick::runOnSelf([](Actor& player, bool server) {
+       // game thread: safe to touch `player` here
+   });
+   CommandManager::print("...");
+   ```
+3. Register it in `CommandManager::init()`.
+

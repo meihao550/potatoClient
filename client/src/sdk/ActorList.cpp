@@ -35,9 +35,8 @@ namespace {
     void logFunctionAddress(void* level) {
         void** vtable = *static_cast<void***>(level);
         void* function = vtable[Offsets::Level::VIndex::getRuntimeActorList];
-        uintptr_t base = Memory::moduleBase();
-        LOG("Level vtable = exe+%#llx", (unsigned long long)((uintptr_t)vtable - base));
-        LOG("getRuntimeActorList = exe+%#llx", (unsigned long long)((uintptr_t)function - base));
+        LOG("Level vtable = exe+%#llx", Memory::rva(vtable));
+        LOG("getRuntimeActorList = exe+%#llx", Memory::rva(function));
     }
 
     void logResult(const std::vector<Actor*>& list, Actor& player) {

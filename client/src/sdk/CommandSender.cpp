@@ -43,11 +43,8 @@ namespace {
 }
 
 bool CommandSender::init() {
-    const uintptr_t hit = Memory::findSig(Offsets::Sig::commandRequestPacketCtor);
-    if (!hit) {
-        LOG("CommandRequestPacket constructor signature not found");
-        return false;
-    }
+    const uintptr_t hit = Memory::scanOrLog("CommandRequestPacket ctor", Offsets::Sig::commandRequestPacketCtor);
+    if (!hit) return false;
     // Double-check: the vtable it writes must name itself "CommandRequestPacket"
     auto** vtable = reinterpret_cast<void**>(Memory::resolveRel32(hit + 0x41, 3, 7));
     std::string_view name;
@@ -57,7 +54,6 @@ bool CommandSender::init() {
         return false;
     }
     g_ctor = reinterpret_cast<Ctor_t>(hit);
-    LOG("CommandRequestPacket ctor at exe+%#llx", static_cast<unsigned long long>(hit - Memory::moduleBase()));
     return true;
 }
 

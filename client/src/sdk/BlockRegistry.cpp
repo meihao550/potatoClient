@@ -84,8 +84,7 @@ bool BlockRegistry::find() {
             g_map = p;
             size_t count = 0;
             readT(p + 8, count);
-            LOG("BlockTypeRegistry map found at exe+%#llx (%zu block types)",
-                static_cast<unsigned long long>(p - Memory::moduleBase()), count);
+            LOG("BlockTypeRegistry map found at exe+%#llx (%zu block types)", Memory::rva(p), count);
             return true;
         }
     }

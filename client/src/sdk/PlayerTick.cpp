@@ -82,14 +82,12 @@ namespace {
     }
 
     bool install(Side& side, NormalTick_t detour) {
-        const uintptr_t hit = Memory::findSig(side.signature);
-        if (!hit) {
-            LOG("%s vtable signature not found", side.name);
-            return false;
-        }
+        char name[64];
+        snprintf(name, sizeof(name), "%s vtable reference", side.name);
+        const uintptr_t hit = Memory::scanOrLog(name, side.signature);
+        if (!hit) return false;
         side.vtable = reinterpret_cast<void**>(Memory::resolveRel32(hit, 3, 7));
-        LOG("%s vtable at exe+%#llx", side.name,
-            static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(side.vtable) - Memory::moduleBase()));
+        LOG("%s vtable at exe+%#llx", side.name, Memory::rva(side.vtable));
         char hookName[64];
         snprintf(hookName, sizeof(hookName), "%s::normalTick", side.name);
         return Hooks::create(hookName, side.vtable[Offsets::Actor::VIndex::normalTick], detour, side.original);

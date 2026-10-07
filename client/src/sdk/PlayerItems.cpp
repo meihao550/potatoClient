@@ -33,8 +33,7 @@ namespace {
             if (memcmp(code + i, pattern, sizeof(pattern)) != 0) continue;
             const uintptr_t call = reinterpret_cast<uintptr_t>(fn) + i + 7;   // the E8 call
             const uintptr_t target = Memory::resolveRel32(call, 1, 5);
-            LOG("ActorEquipment::getHandContainer at exe+%#llx",
-                static_cast<unsigned long long>(target - Memory::moduleBase()));
+            LOG("ActorEquipment::getHandContainer at exe+%#llx", Memory::rva(target));
             return reinterpret_cast<GetHandContainer_t>(target);
         }
         LOG("getHandContainer not found in Actor::getEquippedTotem (game updated?)");

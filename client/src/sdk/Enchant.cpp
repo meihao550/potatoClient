@@ -85,9 +85,8 @@ namespace {
 }
 
 bool Enchant::init() {
-    g_applyEnchant = reinterpret_cast<ApplyEnchant_t>(Memory::findSig(Offsets::Sig::applyEnchant));
-    LOG("EnchantUtils::applyEnchant at exe+%#llx", g_applyEnchant
-        ? static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_applyEnchant) - Memory::moduleBase()) : 0ull);
+    g_applyEnchant = reinterpret_cast<ApplyEnchant_t>(
+        Memory::scanOrLog("EnchantUtils::applyEnchant", Offsets::Sig::applyEnchant));
     return g_applyEnchant != nullptr;
 }
 

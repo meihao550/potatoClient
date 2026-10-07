@@ -1,4 +1,5 @@
 #include "Memory.h"
+#include "Logger.h"
 #include <Windows.h>
 #include <Psapi.h>
 #include <optional>
@@ -59,6 +60,17 @@ uintptr_t Memory::findSig(std::string_view pattern) {
         off = static_cast<size_t>(regionStart + regionSize - start);
     }
     return 0;
+}
+
+uintptr_t Memory::scanOrLog(const char* name, std::string_view pattern) {
+    const uintptr_t hit = findSig(pattern);
+    if (hit) LOG("%s at exe+%#llx", name, rva(hit));
+    else LOG("%s: signature not found (game updated? see Offsets.h)", name);
+    return hit;
+}
+
+unsigned long long Memory::rva(uintptr_t address) {
+    return static_cast<unsigned long long>(address - moduleBase());
 }
 
 bool Memory::safeRead(const void* src, void* dst, size_t size) {

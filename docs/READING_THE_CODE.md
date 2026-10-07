@@ -271,7 +271,7 @@ command messages) are in Japanese. Keep that split.
 ## 9. When the game updates
 
 After a Minecraft update, offsets and signatures usually break. Signatures that are not found are
-logged to `client.log` (for example `LocalPlayer vtable signature not found`), so start there.
+logged to `client.log` (for example `LocalPlayer vtable reference: signature not found`), so start there.
 
 1. Enter a world and run `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` to dump the
    decrypted exe.

@@ -174,3 +174,8 @@ The exe has almost no class names (RTTI) and no fixed pointer to the player, so 
 - **Moving**: ServerPlayer's virtual function 21 `teleportTo(pos, ...)` (the same path as `/tp`). The position is at eye height (feet + 1.62), so the current "eye height − feet" is added before passing it
 - Commands derive from `Command` and are registered in `CommandManager::init()` (the same pattern as modules)
 
+### 6.5 Movement — `sdk/Actor.h` (`moveFeetTo`), `modules/Fly.cpp`, `Speed.cpp`, `commands/MoveCommands.cpp`
+- `Actor+0x228` → ActorRotationComponent (pitch, yaw, previous pitch, previous yaw). yaw 0 = facing +Z, −90 = facing +X
+- **Teleport**: `PlayerTick::runOnSelf` picks "whoever owns the position". If the built-in server is running, ServerPlayer's `teleportTo`; otherwise the LocalPlayer's `StateVector.pos/posPrev` and AABB are shifted by the same amount
+- **Fly / Speed**: `StateVector.posDelta` (velocity, blocks/tick). Each tick the game "moves by posDelta → applies gravity and drag", so overwriting it **right after** the LocalPlayer's normalTick makes the next tick move by exactly that value. A module just implements `Module::onTick` to be called every tick
+

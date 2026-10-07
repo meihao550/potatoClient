@@ -3,6 +3,7 @@
 #include "Offsets.h"
 #include "core/Memory.h"
 #include <cstdint>
+#include <optional>
 
 struct Vec3 { float x, y, z; };
 struct AABB { Vec3 min, max; };
@@ -12,6 +13,16 @@ struct StateVectorComponent { Vec3 pos, posPrev, posDelta; };
 struct AABBShapeComponent { AABB aabb; float width, height; };
 // Degrees. yaw 0 = facing +Z (south), -90 = facing +X (east)
 struct ActorRotationComponent { float pitch, yaw, prevPitch, prevYaw; };
+
+// The three components movement code needs together (see Actor::refs)
+struct ActorRefs {
+    StateVectorComponent& state;
+    AABBShapeComponent& shape;
+    ActorRotationComponent& rotation;
+
+    // Bottom center of the hitbox
+    Vec3 feet() const { return { state.pos.x, shape.aabb.min.y, state.pos.z }; }
+};
 
 class BlockSource {
 public:
@@ -62,6 +73,15 @@ public:
     StateVectorComponent* stateVector() { return at<StateVectorComponent*>(Offsets::Actor::stateVector); }
     AABBShapeComponent* aabbShape()     { return at<AABBShapeComponent*>(Offsets::Actor::aabbShape); }
     ActorRotationComponent* rotation()  { return at<ActorRotationComponent*>(Offsets::Actor::rotation); }
+
+    // All three components at once, or nothing if any is missing (not a player / wrong offsets)
+    std::optional<ActorRefs> refs() {
+        StateVectorComponent* state = stateVector();
+        AABBShapeComponent* shape = aabbShape();
+        ActorRotationComponent* rot = rotation();
+        if (!state || !shape || !rot) return std::nullopt;
+        return ActorRefs{ *state, *shape, *rot };
+    }
 
     BlockSource* blockSource() {
         auto* dimension = at<uint8_t*>(Offsets::Actor::dimension);

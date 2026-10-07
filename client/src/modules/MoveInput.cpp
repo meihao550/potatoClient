@@ -1,6 +1,6 @@
 #include "MoveInput.h"
+#include "core/InputFocus.h"
 #include "core/Util.h"
-#include "gui/Menu.h"
 #include <Windows.h>
 #include <cmath>
 
@@ -9,7 +9,7 @@ namespace {
 }
 
 bool MoveInput::gameHasFocus() {
-    if (Menu::capturesInput()) return false;
+    if (InputFocus::overlayHasInput()) return false;
     DWORD pid = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &pid);
     return pid == GetCurrentProcessId();

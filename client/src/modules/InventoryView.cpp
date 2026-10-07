@@ -1,5 +1,5 @@
 #include "InventoryView.h"
-#include "gui/Menu.h"
+#include "core/InputFocus.h"
 #include "sdk/PlayerItems.h"
 #include <Windows.h>
 #include <imgui.h>
@@ -57,7 +57,7 @@ void InventoryView::onRender() {
     // Only clickable/movable while the menu is open, otherwise mouse goes to the game
     ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse |
                              ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoSavedSettings;
-    if (!Menu::open) flags |= ImGuiWindowFlags_NoInputs;
+    if (!InputFocus::menuOpen) flags |= ImGuiWindowFlags_NoInputs;
 
     const ImVec2 screen = ImGui::GetIO().DisplaySize;
     ImGui::SetNextWindowPos(ImVec2(screen.x - 20, 20), ImGuiCond_FirstUseEver, ImVec2(1, 0));

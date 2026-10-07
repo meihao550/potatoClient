@@ -23,3 +23,16 @@ layout, the threading rules and how to add modules and commands.
 - Python 3.10 or later (64-bit) for `injector/injector.py` and `tools/dump_image.py`
 - git
 
+## Building
+
+### Locally
+
+From the project folder:
+```
+set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+%CMAKE% -S . -B build -G "Visual Studio 16 2019" -A x64
+%CMAKE% --build build --config Release
+```
+Output: `build\Release\client.dll` and `client.pdb`. New `.cpp` files under `client/src/` are
+picked up automatically.
+

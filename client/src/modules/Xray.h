@@ -40,6 +40,7 @@ private:
     void hide(BlockType* b, const Original& o) const;
 
     bool isVisible(const std::string& name) const;
+    // Both need m_mutex held
     bool apply();                      // patch/unpatch every block according to the groups
     void restoreAll();
 
@@ -48,5 +49,5 @@ private:
     std::unordered_map<BlockType*, Original> m_originals;
     bool m_letLightThrough = true;
     std::string m_status;
-    std::mutex m_mutex;
+    std::mutex m_mutex;                // guards everything above
 };

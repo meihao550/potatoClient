@@ -157,6 +157,8 @@ void Xray::onDisable() {
 }
 
 void Xray::renderSettings() {
+    // The settings below are read by apply(), which can run on another thread (key bind -> onEnable)
+    std::lock_guard lock(m_mutex);
     bool changed = false;
     if (!m_status.empty()) ImGui::TextWrapped("%s", m_status.c_str());
     changed |= ImGui::Checkbox("光を通す (鉱石が暗くならない)", &m_letLightThrough);
@@ -191,8 +193,5 @@ void Xray::renderSettings() {
         changed = true;
     }
 
-    if (changed && isEnabled()) {
-        std::lock_guard lock(m_mutex);
-        apply();
-    }
+    if (changed && isEnabled()) apply();
 }

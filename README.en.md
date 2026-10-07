@@ -179,3 +179,9 @@ The exe has almost no class names (RTTI) and no fixed pointer to the player, so 
 - **Teleport**: `PlayerTick::runOnSelf` picks "whoever owns the position". If the built-in server is running, ServerPlayer's `teleportTo`; otherwise the LocalPlayer's `StateVector.pos/posPrev` and AABB are shifted by the same amount
 - **Fly / Speed**: `StateVector.posDelta` (velocity, blocks/tick). Each tick the game "moves by posDelta → applies gravity and drag", so overwriting it **right after** the LocalPlayer's normalTick makes the next tick move by exactly that value. A module just implements `Module::onTick` to be called every tick
 
+### 7. DUPE command — `client/src/commands/DupeCommand.cpp`
+- The inventory contents are an array of `ItemStack` (0x98 bytes). The count is the 1-byte `mCount` (+0x22)
+- Actor virtual function 77 `getCarriedItem()` returns "a reference to the ItemStack of the selected slot" (internally: PlayerInventory at `Actor+0x5B8` → selected slot index (+0x10) → container (+0xB8) `getItem(slot)`). It is a reference, so writing to it changes the real stack
+- The maximum stack size comes from ItemStack → `WeakPtr<Item>` (+0x08) → Item's `mMaxStackSize` (+0xA8)
+- **The same value is written on both server and client.** The server's copy is the real one (used for saving and placing), the client's is for display. The server doesn't resend slots it thinks are unchanged, so writing only one side makes the display go out of sync
+

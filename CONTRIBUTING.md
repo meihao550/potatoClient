@@ -112,3 +112,7 @@ pull request which version you verified against.
   - any new offsets or signatures and how you found them.
 - Make sure the Release build succeeds before opening the pull request.
 
+## License
+
+PotatoClient is licensed under the [Apache License 2.0](LICENSE). By contributing, you agree that
+your contributions are licensed under the same license.

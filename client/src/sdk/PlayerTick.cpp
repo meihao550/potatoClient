@@ -75,7 +75,7 @@ namespace {
     }
     void hkServerTick(Actor* self) { g_server.original(self); g_server.onTick(self); }
 
-    bool install(Side& side, void* detour) {
+    bool install(Side& side, NormalTick_t detour) {
         const uintptr_t hit = Memory::findSig(side.signature);
         if (!hit) {
             LOG("%s vtable signature not found", side.name);
@@ -86,8 +86,7 @@ namespace {
             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(side.vtable) - Memory::moduleBase()));
         char hookName[64];
         snprintf(hookName, sizeof(hookName), "%s::normalTick", side.name);
-        return Hooks::create(hookName, side.vtable[Offsets::Actor::VIndex::normalTick], detour,
-                             reinterpret_cast<void**>(&side.original));
+        return Hooks::create(hookName, side.vtable[Offsets::Actor::VIndex::normalTick], detour, side.original);
     }
 }
 

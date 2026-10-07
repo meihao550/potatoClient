@@ -101,10 +101,12 @@ bool Input::hookGameInput() {
     if (!mouse && !keyboard) return false;
 
     void** vt = mouse ? mouse : keyboard;
-    Hooks::create("IGameInputReading::GetMouseState", vt[14], &hkGetMouseState, reinterpret_cast<void**>(&oGetMouseState));
-    Hooks::create("IGameInputReading::GetKeyState", vt[13], &hkGetKeyState, reinterpret_cast<void**>(&oGetKeyState));
+    const bool mouseOk = Hooks::create("IGameInputReading::GetMouseState", vt[14], &hkGetMouseState, oGetMouseState);
+    const bool keysOk = Hooks::create("IGameInputReading::GetKeyState", vt[13], &hkGetKeyState, oGetKeyState);
+    if (!mouseOk || !keysOk)
+        LOG("warning: GameInput hooks incomplete (mouse %d, keys %d); the menu may not block game input", mouseOk, keysOk);
     if (mouse && keyboard && mouse[14] != keyboard[14])
         LOG("warning: mouse and keyboard readings use different vtables; keyboard lock may not work");
-    done = true;
+    done = true;   // don't retry: a second MH_CreateHook on the same target would fail anyway
     return true;
 }

@@ -69,7 +69,7 @@ namespace {
 
 bool Input::init() {
     void* target = reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetRawInputData"));
-    return Hooks::create("user32!GetRawInputData", target, &hkGetRawInputData, reinterpret_cast<void**>(&oGetRawInputData));
+    return Hooks::create("user32!GetRawInputData", target, &hkGetRawInputData, oGetRawInputData);
 }
 
 void Input::install(HWND hwnd) {

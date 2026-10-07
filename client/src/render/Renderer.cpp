@@ -138,9 +138,9 @@ bool Renderer::init() {
         LOG("failed to create dummy D3D12 swapchain");
         return false;
     }
-    bool ok = Hooks::create("ID3D12CommandQueue::Execute", execute, &hkExecuteCommandLists, reinterpret_cast<void**>(&oExecuteCommandLists));
-    ok &= Hooks::create("IDXGISwapChain::ResizeBuffers", resize, &hkResizeBuffers, reinterpret_cast<void**>(&oResizeBuffers));
-    ok &= Hooks::create("IDXGISwapChain::Present", present, &hkPresent, reinterpret_cast<void**>(&oPresent));
+    bool ok = Hooks::create("ID3D12CommandQueue::Execute", execute, &hkExecuteCommandLists, oExecuteCommandLists);
+    ok &= Hooks::create("IDXGISwapChain::ResizeBuffers", resize, &hkResizeBuffers, oResizeBuffers);
+    ok &= Hooks::create("IDXGISwapChain::Present", present, &hkPresent, oPresent);
     return ok;
 }
 

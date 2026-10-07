@@ -206,3 +206,19 @@ All offsets live in `client/src/sdk/Offsets.h`.
 5. For the UP command: check in the disassembly that the `LocalPlayer` / `ServerPlayer` vtable signatures still match exactly one location and that the vtable indices (`VIndex`) are still right
    - The player can be found by searching memory for the "AABBShapeComponent with a 0.6×1.8 hitbox" and following the Actor that points to it (+0x220)
 
+## Layout
+```
+injector/injector.py          one-button Inject
+tools/dump_image.py           dumps the exe from the running game
+client/src/
+  dllmain.cpp                 init thread / unload
+  core/                       logging, pattern scan, MinHook wrapper
+  render/                     Present hook, ImGui drawing for D3D12 / D3D11
+  gui/                        menu, WndProc, input hooks
+  modules/                    Module base, ModuleManager, Xray, Fly, Speed, Aimbox, Inventory, AutoTotem
+  commands/                   Command base, CommandManager, up / vclip / hclip / tp / dupe / enchant / help
+  sdk/                        game structures (offsets, BlockType, Actor, registry lookup, player tick hooks)
+```
+A new feature derives from `Module` and is registered in `ModuleManager::init()` to show up in the menu.
+A new command derives from `Command` and is registered in `CommandManager::init()` to be usable from the command bar.
+

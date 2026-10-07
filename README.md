@@ -1,5 +1,7 @@
 # PotatoClient — Minecraft Bedrock クライアント
 
+日本語 | [English](README.en.md)
+
 Horion 風の内部 (DLL) クライアントを一から作って、チートクライアントの仕組みを学ぶためのプロジェクトです。
 対象: **Minecraft Bedrock 1.26.52 (GDK 版 / `Minecraft.Windows.exe`)**
 

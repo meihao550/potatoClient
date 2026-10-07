@@ -136,3 +136,33 @@ The rules that follow from this:
   and AutoTotem all write on the server side).
 - **Report results with `CommandManager::print()`.** It can be called from any thread.
 
+## 5. Module and command lifecycle
+
+### Modules (`modules/Module.h`)
+
+```cpp
+class Module {
+    Module(std::string name, std::string description, int key);   // key = virtual-key code, 0 = unbound
+    virtual bool onEnable();          // return false to refuse being enabled
+    virtual void onDisable();
+    virtual void renderSettings();    // ImGui widgets inside the menu's "設定" (Settings) node
+    virtual bool isAvailable() const; // false = a signature was not found, so the checkbox is disabled
+    virtual void onTick(Actor& player);  // every client tick while enabled (client game thread)
+    virtual void onRender();             // every frame while enabled (render thread)
+};
+```
+
+- **Registration**: `ModuleManager::init()` (`modules/ModuleManager.cpp:22-32`) pushes each module
+  into a list. The order matters: later modules' `onTick` runs after earlier ones, which is
+  why Fly comes after Speed (Fly wins when both are on).
+- **Menu**: `Menu::render()` (`gui/Menu.cpp`) loops over `ModuleManager::modules()` and draws a
+  checkbox, a key-bind button, the description and the Settings tree for each. A new module
+  appears there automatically.
+- **Ticks**: `ModuleManager::init()` registers `onClientTick` with
+  `PlayerTick::setClientTickListener`, so every client tick calls `onTick` on each enabled module.
+- **Keys**: `hookedWndProc` → `ModuleManager::onKey(vk)` → `toggle()` on every module bound to that key.
+- **Unload**: `ModuleManager::shutdown()` disables all modules. Put cleanup in `onDisable` (Xray
+  uses it to restore the original block data).
+
+There is no config file. Settings are plain member fields and reset when the DLL is reloaded.
+

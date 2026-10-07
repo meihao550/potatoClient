@@ -8,11 +8,13 @@
 #include <string>
 
 namespace {
-    Module* g_binding = nullptr;   // module waiting for a new key
+    // Set on the render thread (button), consumed on the window thread (next key press)
+    std::atomic<Module*> g_binding = nullptr;   // module waiting for a new key
 
-    char g_command[128] = "";
-    bool g_focusCommand = false;
-    bool g_closeCommandRequested = false;
+    char g_command[128] = "";   // render thread only
+    // Set on the window thread (Home / Esc), handled on the render thread
+    std::atomic<bool> g_focusCommand = false;
+    std::atomic<bool> g_closeCommandRequested = false;
 
     bool keyHeld(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
 
@@ -30,12 +32,12 @@ namespace {
         ImGui::SetNextWindowSize(ImVec2(420, 0));
         ImGui::Begin("##command", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings);
         ImGui::TextDisabled("コマンド (Enter: 実行 / Esc: 閉じる / help: 一覧)");
-        if (g_focusCommand) {
+        if (g_focusCommand.exchange(false)) {
+            g_command[0] = 0;   // a fresh, empty bar each time it opens
             // Forget keys ImGui may still think are held from before (e.g. the Enter that
             // closed the bar last time) - a "held" Enter would submit the empty box at once.
             ImGui::GetIO().ClearInputKeys();
             ImGui::SetKeyboardFocusHere();
-            g_focusCommand = false;
         }
         ImGui::SetNextItemWidth(-1);
         if (ImGui::InputText("##input", g_command, sizeof(g_command), ImGuiInputTextFlags_EnterReturnsTrue)) {
@@ -86,19 +88,18 @@ void Menu::loadFonts() {
 }
 
 bool Menu::onKeyForBinding(int vk) {
-    if (!g_binding) return false;
-    g_binding->setKey(vk == VK_ESCAPE ? 0 : vk);   // Esc clears the bind
-    g_binding = nullptr;
+    Module* module = g_binding.exchange(nullptr);
+    if (!module) return false;
+    module->setKey(vk == VK_ESCAPE ? 0 : vk);   // Esc clears the bind
     return true;
 }
 
 void Menu::openCommandBar() {
     if (commandOpen) return;   // Home only opens; Esc / Enter close
     LOG("command bar: opened");
-    commandOpen = true;
-    g_command[0] = 0;
-    g_focusCommand = true;
     g_closeCommandRequested = false;
+    g_focusCommand = true;     // the render thread clears the text and focuses the box
+    commandOpen = true;
 }
 
 void Menu::closeCommandBar(const char* reason) {
@@ -113,7 +114,8 @@ void Menu::render() {
     renderLastMessage();
     if (!open) return;
     ImGui::SetNextWindowSize(ImVec2(420, 360), ImGuiCond_FirstUseEver);
-    ImGui::Begin("PotatoClient  (Insert: 閉じる / End: アンロード)", &open);
+    bool keepOpen = true;   // the window's close button
+    ImGui::Begin("PotatoClient  (Insert: 閉じる / End: アンロード)", &keepOpen);
 
     for (auto& m : ModuleManager::modules()) {
         ImGui::PushID(m.get());
@@ -136,4 +138,5 @@ void Menu::render() {
         ImGui::PopID();
     }
     ImGui::End();
+    if (!keepOpen) open = false;
 }

@@ -1,7 +1,9 @@
 #include "PlayerItems.h"
 #include "core/Logger.h"
+#include <Windows.h>
 #include <atomic>
 #include <cstring>
+#include <mutex>
 
 /*
  * Inventory: Actor+0x5B8 -> PlayerInventory -> +0xB8 -> Inventory (a Container).
@@ -17,7 +19,8 @@
 namespace {
     using GetHandContainer_t = Container* (*)(void* entityContext);
     std::atomic<GetHandContainer_t> g_getHandContainer = nullptr;
-    std::atomic<bool> g_searched = false;
+    std::mutex g_searchMutex;
+    ULONGLONG g_nextSearch = 0;   // guarded by g_searchMutex
 
     GetHandContainer_t findGetHandContainer(Actor& player) {
         static const uint8_t pattern[] = { 0x48, 0x89, 0xCE, 0x48, 0x83, 0xC1, 0x08, 0xE8 };
@@ -36,6 +39,20 @@ namespace {
         }
         LOG("getHandContainer not found in Actor::getEquippedTotem (game updated?)");
         return nullptr;
+    }
+
+    // Found once and then cached. Both game threads can ask at the same time, so the search
+    // is serialized; a failed search is retried after a while instead of on every tick.
+    GetHandContainer_t handContainerFunction(Actor& player) {
+        if (GetHandContainer_t fn = g_getHandContainer) return fn;
+        std::lock_guard lock(g_searchMutex);
+        if (GetHandContainer_t fn = g_getHandContainer) return fn;   // found while we waited
+        const ULONGLONG now = GetTickCount64();
+        if (now < g_nextSearch) return nullptr;
+        g_nextSearch = now + 10000;
+        GetHandContainer_t fn = findGetHandContainer(player);
+        g_getHandContainer = fn;
+        return fn;
     }
 
     bool isValidInventory(Container* c) {
@@ -57,8 +74,7 @@ int PlayerItems::selectedSlot(Actor& player) {
 }
 
 Container* PlayerItems::hands(Actor& player) {
-    if (!g_searched.exchange(true)) g_getHandContainer = findGetHandContainer(player);
-    GetHandContainer_t fn = g_getHandContainer;
+    GetHandContainer_t fn = handContainerFunction(player);
     if (!fn) return nullptr;
     return fn(reinterpret_cast<uint8_t*>(&player) + Offsets::Actor::entityContext);
 }

@@ -1,4 +1,5 @@
 #include "ModuleManager.h"
+#include "Config.h"
 #include "Fly.h"
 #include "Speed.h"
 #include "Xray.h"
@@ -28,10 +29,14 @@ void ModuleManager::init() {
     g_modules.push_back(std::make_unique<Fly>());   // after Speed: while both are on, Fly wins
     for (auto& m : g_modules)
         LOG("module %-10s available=%d", m->name().c_str(), m->isAvailable());
+    Config::load();   // key binds, settings, and turns on what was on last time
     PlayerTick::setClientTickListener(&onClientTick);
 }
 
 void ModuleManager::shutdown() {
+    // Before turning everything off, so "on" is remembered. Skipped if init never ran
+    // (hooks failed) - saving no modules would wipe the file.
+    if (!g_modules.empty()) Config::save();
     PlayerTick::setClientTickListener(nullptr);
     for (auto& m : g_modules) m->setEnabled(false);
 }

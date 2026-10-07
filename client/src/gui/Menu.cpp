@@ -2,6 +2,7 @@
 #include "commands/CommandManager.h"
 #include "core/InputFocus.h"
 #include "core/Logger.h"
+#include "modules/Config.h"
 #include "modules/ModuleManager.h"
 #include <Windows.h>
 #include <imgui.h>
@@ -113,7 +114,13 @@ void Menu::render() {
     ModuleManager::render();
     renderCommandBar();
     renderLastMessage();
-    if (!InputFocus::menuOpen) return;
+
+    // Save when the menu closes, so changes survive even if the game crashes before End
+    static bool wasOpen = false;
+    const bool isOpen = InputFocus::menuOpen;
+    if (wasOpen && !isOpen) Config::save();
+    wasOpen = isOpen;
+    if (!isOpen) return;
     ImGui::SetNextWindowSize(ImVec2(420, 360), ImGuiCond_FirstUseEver);
     bool keepOpen = true;   // the window's close button
     ImGui::Begin("PotatoClient  (Insert: 閉じる / End: アンロード)", &keepOpen);

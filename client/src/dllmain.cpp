@@ -49,8 +49,12 @@ static DWORD WINAPI mainThread(LPVOID) {
     LOG("unloading...");
     ModuleManager::shutdown();   // turn modules off (restores rendering)
     Input::uninstall();
-    Hooks::shutdown();
-    Sleep(200);                  // let in-flight hooked calls return
+    if (!Hooks::shutdown()) {    // waits for game threads still inside our detours
+        // Freeing the DLL now would crash the game; stay loaded (hooks disabled) instead
+        LOG("could not unload cleanly - the client stays in memory but does nothing. Restart the game to remove it.");
+        Logger::shutdown();
+        ExitThread(0);
+    }
     Renderer::shutdown();
     LOG("bye");
     Logger::shutdown();

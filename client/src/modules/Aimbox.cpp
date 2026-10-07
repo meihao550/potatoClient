@@ -60,13 +60,14 @@ void Aimbox::onTick(Actor& player) {
     snap.yaw = me->rotation.yaw;
     snap.pitch = me->rotation.pitch;
 
+    const float range = m_range;
     for (Actor* a : ActorList::get(player)) {
         if (!a || a == &player) continue;
         AABBShapeComponent* shape = a->aabbShape();
         if (!shape) continue;
         if (m_skipSmall && shape->width < 0.3f) continue;
         const Vec3 d = sub(shape->aabb.min, me->state.pos);
-        if (dot(d, d) > m_range * m_range) continue;
+        if (dot(d, d) > range * range) continue;
         snap.boxes.push_back(shape->aabb);
     }
 
@@ -83,7 +84,7 @@ void Aimbox::onRender() {
     if (GetTickCount64() - snap.time > 500) return;   // paused / left the world
 
     const Camera cam = makeCamera(snap.eye, snap.yaw, snap.pitch, m_fov, ImGui::GetIO().DisplaySize);
-    const ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(m_color[0], m_color[1], m_color[2], m_color[3]));
+    const ImU32 color = m_color.packed();
     ImDrawList* draw = ImGui::GetBackgroundDrawList();
 
     static const int edges[12][2] = {
@@ -109,12 +110,4 @@ void Aimbox::onRender() {
 void Aimbox::onDisable() {
     std::lock_guard lock(m_mutex);
     m_snap = {};
-}
-
-void Aimbox::renderSettings() {
-    ImGui::SliderFloat("FOV", &m_fov, 30.0f, 110.0f, "%.0f");
-    ImGui::SliderFloat("距離", &m_range, 8.0f, 128.0f, "%.0f ブロック");
-    ImGui::Checkbox("小さいもの (アイテム・経験値) を除く", &m_skipSmall);
-    ImGui::ColorEdit4("色", m_color);
-    ImGui::TextDisabled("箱がずれるときは FOV をゲームの設定に合わせる");
 }

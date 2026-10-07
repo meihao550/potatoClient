@@ -64,7 +64,8 @@ void InventoryView::onRender() {
     ImGui::SetNextWindowBgAlpha(0.6f);
     ImGui::Begin("インベントリ", nullptr, flags);
 
-    const ImVec2 cell(m_cellWidth, m_cellWidth * 0.6f);
+    const float width = m_cellWidth;
+    const ImVec2 cell(width, width * 0.6f);
     auto drawSlot = [&](const Slot& slot, bool selected, int id) {
         ImGui::PushID(id);
         if (selected) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.7f, 0.1f, 0.8f));
@@ -108,10 +109,4 @@ void InventoryView::onRender() {
 void InventoryView::onDisable() {
     std::lock_guard lock(m_mutex);
     m_snap = {};
-}
-
-void InventoryView::renderSettings() {
-    ImGui::SliderFloat("マスの大きさ", &m_cellWidth, 40.0f, 120.0f, "%.0f px");
-    ImGui::Checkbox("オフハンドも表示", &m_showOffhand);
-    ImGui::TextDisabled("メニューを開いている間はウィンドウを動かせる / マスにカーソルで名前");
 }

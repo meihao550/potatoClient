@@ -68,9 +68,7 @@ void AutoTotem::onTick(Actor& player) {
 }
 
 void AutoTotem::renderSettings() {
-    bool swap = m_swapOffhand;
-    if (ImGui::Checkbox("オフハンドに別のものがあっても入れ替える", &swap)) m_swapOffhand = swap;
-    ImGui::TextDisabled("入れ替えたものはインベントリの空きマスへ (空きがないときは何もしない)");
+    renderRegisteredSettings();
     ImGui::Text("装備した回数: %d", m_equipped.load());
     if (!PlayerTick::ticking(PlayerTick::Side::Server))
         ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "シングルプレイのワールドでのみ動きます");

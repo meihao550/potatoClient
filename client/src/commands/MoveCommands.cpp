@@ -1,13 +1,13 @@
 #include "MoveCommands.h"
 #include "Args.h"
 #include "CommandManager.h"
+#include "Require.h"
 #include "core/Util.h"
 #include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <Windows.h>
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <optional>
 
 /*
@@ -30,23 +30,10 @@ namespace {
         return offset ? std::optional<float>(current + *offset) : std::nullopt;
     }
 
-    bool inWorld() {
-        if (PlayerTick::ticking(PlayerTick::Side::Client)) return true;
-        CommandManager::print("ワールドに入ってから使ってください");
-        return false;
-    }
-
     void report(const Vec3& to) {
         char text[96];
         snprintf(text, sizeof(text), "%.1f %.1f %.1f へ移動しました", to.x, to.y, to.z);
         CommandManager::print(text);
-    }
-
-    // The player's components, or nothing (and a message) when they can't be read
-    std::optional<ActorRefs> playerRefs(Actor& player) {
-        auto refs = player.refs();
-        if (!refs) CommandManager::print("プレイヤーの情報が取れません (Offsets.h を確認)");
-        return refs;
     }
 }
 
@@ -69,10 +56,10 @@ void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
 void VClipCommand::execute(const std::vector<std::string>& args) {
     const auto blocks = args.size() >= 2 ? Args::parseFloat(args[1]) : std::nullopt;
     if (!blocks) { CommandManager::printUsage(*this); return; }
-    if (!inWorld()) return;
+    if (!Require::inWorld()) return;
 
     PlayerTick::runOnSelf([dy = *blocks](Actor& player, bool server) {
-        const auto refs = playerRefs(player);
+        const auto refs = Require::playerRefs(player);
         if (!refs) return;
         Vec3 to = refs->feet();
         to.y += dy;
@@ -85,10 +72,10 @@ void VClipCommand::execute(const std::vector<std::string>& args) {
 void HClipCommand::execute(const std::vector<std::string>& args) {
     const auto blocks = args.size() >= 2 ? Args::parseFloat(args[1]) : std::nullopt;
     if (!blocks) { CommandManager::printUsage(*this); return; }
-    if (!inWorld()) return;
+    if (!Require::inWorld()) return;
 
     PlayerTick::runOnSelf([distance = *blocks](Actor& player, bool server) {
-        const auto refs = playerRefs(player);
+        const auto refs = Require::playerRefs(player);
         if (!refs) return;
         const float yaw = refs->rotation.yaw * Util::kDegToRad;
         Vec3 to = refs->feet();
@@ -102,10 +89,10 @@ void HClipCommand::execute(const std::vector<std::string>& args) {
 
 void TpCommand::execute(const std::vector<std::string>& args) {
     if (args.size() != 4) { CommandManager::printUsage(*this); return; }
-    if (!inWorld()) return;
+    if (!Require::inWorld()) return;
 
     PlayerTick::runOnSelf([args](Actor& player, bool server) {
-        const auto refs = playerRefs(player);
+        const auto refs = Require::playerRefs(player);
         if (!refs) return;
         const Vec3 from = refs->feet();
         const auto x = parseCoordinate(args[1], from.x);

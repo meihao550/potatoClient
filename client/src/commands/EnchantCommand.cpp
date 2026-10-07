@@ -1,6 +1,7 @@
 #include "EnchantCommand.h"
 #include "Args.h"
 #include "CommandManager.h"
+#include "Require.h"
 #include "core/Util.h"
 #include "sdk/CommandSender.h"
 #include "sdk/Enchant.h"
@@ -25,6 +26,7 @@
 
 namespace {
     using Wanted = std::vector<std::pair<uint8_t, int>>;   // (enchant id, level)
+    constexpr const char* kHoldSomething = "エンチャントしたい武器・防具を手に持ってください";
 
     const Enchant::Info* byId(uint8_t id) {
         for (const auto& e : Enchant::all())
@@ -46,11 +48,8 @@ namespace {
 
     // Server thread: enchant our ServerPlayer's held item, then mirror it on the client
     void enchantHeld(Actor& server, const Wanted& wanted) {
-        ItemStack* stack = server.getCarriedItem();
-        if (!stack || !stack->item()) {
-            CommandManager::print("エンチャントしたい武器・防具を手に持ってください");
-            return;
-        }
+        ItemStack* stack = Require::heldItem(server, kHoldSomething);
+        if (!stack) return;
 
         Wanted applied;
         for (const auto& [id, level] : wanted)
@@ -78,11 +77,8 @@ namespace {
 
     // Client thread, remote server: let the server run the vanilla /enchant for us
     void enchantViaServer(Actor& local, const Wanted& wanted) {
-        ItemStack* stack = local.getCarriedItem();
-        if (!stack || !stack->item()) {
-            CommandManager::print("エンチャントしたい武器・防具を手に持ってください");
-            return;
-        }
+        ItemStack* stack = Require::heldItem(local, kHoldSomething);
+        if (!stack) return;
 
         std::string text = std::string(stack->name()) + " に送信:";
         int sent = 0;
@@ -113,10 +109,7 @@ void EnchantCommand::execute(const std::vector<std::string>& args) {
         printList();
         return;
     }
-    if (!PlayerTick::ticking(Side::Client)) {
-        CommandManager::print("ワールドに入ってから使ってください");
-        return;
-    }
+    if (!Require::inWorld()) return;
 
     Wanted wanted;
     if (Util::toLower(args[1]) == "all") {

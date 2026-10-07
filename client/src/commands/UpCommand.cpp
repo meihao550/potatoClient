@@ -1,6 +1,7 @@
 #include "UpCommand.h"
 #include "CommandManager.h"
 #include "MoveCommands.h"
+#include "Require.h"
 #include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <cmath>
@@ -26,14 +27,13 @@
  */
 
 namespace {
-    using PlayerTick::Side;
-
     // Runs on the thread of whichever side owns our position (see PlayerTick::runOnSelf)
     void teleportUp(Actor& player, bool server) {
-        const auto refs = player.refs();
+        const auto refs = Require::playerRefs(player);
+        if (!refs) return;
         BlockSource* region = player.blockSource();
-        if (!refs || !region) {
-            CommandManager::print("プレイヤーの情報が取れません (Offsets.h を確認)");
+        if (!region) {
+            CommandManager::print("ワールドの情報が取れません (Offsets.h の Dimension を確認)");
             return;
         }
 
@@ -63,10 +63,6 @@ namespace {
 }
 
 void UpCommand::execute(const std::vector<std::string>&) {
-    if (!PlayerTick::ticking(Side::Client)) {
-        CommandManager::print("ワールドに入ってから使ってください");
-        return;
-    }
-
+    if (!Require::inWorld()) return;
     PlayerTick::runOnSelf(teleportUp);
 }

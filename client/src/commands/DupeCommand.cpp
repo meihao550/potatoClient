@@ -1,6 +1,7 @@
 #include "DupeCommand.h"
 #include "Args.h"
 #include "CommandManager.h"
+#include "Require.h"
 #include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <cstdio>
@@ -53,14 +54,7 @@ namespace {
 
 void DupeCommand::execute(const std::vector<std::string>& args) {
     using PlayerTick::Side;
-    if (!PlayerTick::ticking(Side::Client)) {
-        CommandManager::print("ワールドに入ってから使ってください");
-        return;
-    }
-    if (!PlayerTick::ticking(Side::Server)) {
-        CommandManager::print("自分のワールド (シングルプレイ) でのみ使えます");
-        return;
-    }
+    if (!Require::inWorld() || !Require::ownWorld()) return;
 
     int wanted = 0;   // 0 = max stack size
     if (args.size() > 1) {

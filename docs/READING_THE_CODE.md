@@ -15,8 +15,9 @@ PotatoClient is an **internal client** for Minecraft Bedrock 1.26.52 (the GDK bu
 - **`client.dll`** (C++20, built with CMake and MSVC). Once it is loaded into the game process it hooks
   the game's rendering, input and player tick. It draws an ImGui menu and changes game state
   by reading and writing the game's own objects in memory.
-- **`injector/injector.py`** (Python, standard library only). It makes the game load the DLL with
-  the classic `CreateRemoteThread(LoadLibraryW)` technique.
+- **`injector.exe`** (`injector/injector.cpp`, built next to the DLL). It makes the game load the DLL
+  with the classic `CreateRemoteThread(LoadLibraryW)` technique. `injector/injector.py` does the
+  same in Python with a small GUI.
 
 There is no game API and no mod loader. Everything the DLL knows about the game (struct
 offsets, virtual function slots, byte signatures) was found by reverse engineering and lives in
@@ -32,7 +33,8 @@ CONTRIBUTING.md         How to build, test and send changes
 docs/
   ENCHANT.md            Manual for the `enchant` command (Japanese)
   READING_THE_CODE.md   This file
-injector/injector.py    tkinter + ctypes injector (copies the DLL, then LoadLibraryW)
+injector/injector.cpp   Console injector (copies the DLL, then LoadLibraryW) -> injector.exe
+injector/injector.py    The same steps in Python (tkinter + ctypes), optional
 tools/dump_image.py     Dumps the decrypted game exe from memory for Ghidra / IDA
 client/src/
   dllmain.cpp           Entry point: start-up order and unload sequence

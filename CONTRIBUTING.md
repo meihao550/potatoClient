@@ -20,7 +20,7 @@ layout, the threading rules and how to add modules and commands.
 - Windows 10 / 11 (x64)
 - Minecraft Bedrock **1.26.52**, GDK build (needed to test, not to build)
 - Visual Studio 2019 or later (2022 / 2026, Community or Build Tools) with "Desktop development with C++", **or** Docker in Windows-containers mode
-- Python 3.10 or later (64-bit) for `injector/injector.py` and `tools/dump_image.py`
+- Python 3.10 or later (64-bit) only if you use `injector/injector.py` or `tools/dump_image.py` (the build and `injector.exe` don't need it)
 - git
 
 ## Building
@@ -57,7 +57,7 @@ On Windows 10 add `--build-arg WINDOWS_VERSION=ltsc2019`, or build with `--isola
 There are no automated tests. The game itself is the test environment.
 
 1. Build in Release with no new warnings (the project compiles with `/W3`).
-2. Start the game, enter a **single-player** world, and run `python injector\injector.py`.
+2. Start the game, enter a **single-player** world, and run `build\Release\injector.exe`.
 3. Exercise your change. Watch the console window and `build\Release\client.log`.
 4. Press **End** to unload, and check that the game keeps running and that your module cleans up
    after itself (for example, Xray restores the original blocks in `onDisable`).

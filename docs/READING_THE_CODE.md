@@ -223,3 +223,29 @@ Guidelines that the existing code follows:
 Code comments are in English. User-facing strings (module names and descriptions, menu text,
 command messages) are in Japanese. Keep that split.
 
+## 8. Recipes
+
+### Adding a module
+
+1. Create `client/src/modules/MyModule.h`:
+   ```cpp
+   #pragma once
+   #include "Module.h"
+
+   // One line: what it does
+   class MyModule : public Module {
+   public:
+       MyModule() : Module("MyModule", "説明 (shown in the menu)", 0) {}
+       void onTick(Actor& player) override;
+       void renderSettings() override;
+
+   private:
+       float m_value = 1.0f;
+   };
+   ```
+2. Create `client/src/modules/MyModule.cpp`. Implement `onTick` (game thread) and/or
+   `onRender` (render thread). `Speed.cpp` is a good template.
+3. Add `#include "MyModule.h"` and `g_modules.push_back(std::make_unique<MyModule>());` to
+   `ModuleManager::init()`.
+4. Rebuild. CMake picks up new `.cpp` files automatically (`file(GLOB_RECURSE ... CONFIGURE_DEPENDS)`).
+

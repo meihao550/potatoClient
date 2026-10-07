@@ -207,3 +207,19 @@ Guidelines that the existing code follows:
   A module that depends on a signature should override `isAvailable()`. The menu then disables its
   checkbox and shows 「シグネチャ未検出のため無効」 ("disabled: signature not found").
 
+## 7. Naming and style conventions
+
+| Thing | Convention | Example |
+|---|---|---|
+| Classes, files | PascalCase | `AutoTotem`, `AutoTotem.cpp` |
+| Namespaces | PascalCase | `PlayerItems`, `Offsets::Actor` |
+| Functions, methods | camelCase | `findTotem`, `setOffhandSlot` |
+| Member fields | `m_` prefix | `m_speed`, `m_enabled` |
+| File-local globals | `g_` prefix, in an anonymous namespace | `g_modules`, `g_client` |
+| Hook detours / originals | `hk` / `o` prefix | `hkPresent` / `oPresent` |
+| Headers | `#pragma once` | |
+| Formatting | 4 spaces, braces on the same line | |
+
+Code comments are in English. User-facing strings (module names and descriptions, menu text,
+command messages) are in Japanese. Keep that split.
+

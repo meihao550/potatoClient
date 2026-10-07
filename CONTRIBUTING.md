@@ -51,3 +51,17 @@ On Windows 10 add `--build-arg WINDOWS_VERSION=ltsc2019`, or build with `--isola
 > MinHook is fetched from its `master` branch (`CMakeLists.txt`), so two builds made at different
 > times may use different MinHook versions. Keep this in mind if a build suddenly breaks.
 
+## Testing your change
+
+There are no automated tests. The game itself is the test environment.
+
+1. Build in Release with no new warnings (the project compiles with `/W3`).
+2. Start the game, enter a **single-player** world, and run `python injector\injector.py`.
+3. Exercise your change. Watch the console window and `build\Release\client.log`.
+4. Press **End** to unload, and check that the game keeps running and that your module cleans up
+   after itself (for example, Xray restores the original blocks in `onDisable`).
+5. Inject again to make sure re-injection still works.
+
+If the game crashes, the faulting offset in `client.dll` (Event Viewer → Windows Logs →
+Application) plus `client.pdb` tells you the source line.
+

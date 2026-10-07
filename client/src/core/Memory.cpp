@@ -1,8 +1,9 @@
 #include "Memory.h"
 #include <Windows.h>
 #include <Psapi.h>
-#include <vector>
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace {
     MODULEINFO g_info{};

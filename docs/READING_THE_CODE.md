@@ -26,25 +26,30 @@ one file, `client/src/sdk/Offsets.h`.
 ## 2. Repository map
 
 ```
-CMakeLists.txt          The whole build: fetches MinHook + Dear ImGui, builds client.dll
+CMakeLists.txt          The whole build: fetches MinHook, Dear ImGui and nlohmann/json, builds client.dll + injector.exe
 Dockerfile              Builds client.dll in a Windows container (build only, no injection)
 README.md / .en.md      Usage and a "how it works" overview (Japanese / English)
 CONTRIBUTING.md         How to build, test and send changes
 docs/
   ENCHANT.md            Manual for the `enchant` command (Japanese)
   READING_THE_CODE.md   This file
+  REFACTORING.md        What the 2026 refactoring changed and why (start here when reviewing it)
 injector/injector.cpp   Console injector (copies the DLL, then LoadLibraryW) -> injector.exe
 injector/injector.py    The same steps in Python (tkinter + ctypes), optional
 tools/dump_image.py     Dumps the decrypted game exe from memory for Ghidra / IDA
 client/src/
   dllmain.cpp           Entry point: start-up order and unload sequence
   core/                 Building blocks with no game knowledge
-    Hooks.*             MinHook wrapper: Hooks::create(name, target, detour, &original)
+    Hooks.*             MinHook wrapper: Hooks::create(name, target, &detour, original)
+    InFlight.h          Counts threads inside our detours, so unloading can wait for them
+    InputFocus.h        Whether the menu / command bar own the keyboard and mouse
     Logger.*            Console window + client.log, the LOG(...) macro
-    Memory.*            Module base, findSig (pattern scan), safeRead, resolveRel32, callVirtual<>
+    Memory.*            Module base, findSig / scanOrLog (pattern scan), rva, safeRead, resolveRel32, callVirtual<>
+    Util.h              toLower, kDegToRad
   render/               Getting a frame to draw on
     Renderer.*          Finds the DXGI / D3D12 vtables, hooks Present / ResizeBuffers / ExecuteCommandLists
     Backends.h          Interface of the two ImGui draw backends
+    Overlay.*           The API-independent half: ImGui context, building each frame's UI
     Dx12Backend.cpp     ImGui on D3D12 (what the game normally uses)
     Dx11Backend.cpp     ImGui on D3D11 (fallback)
   gui/                  What the user sees and presses
@@ -52,17 +57,22 @@ client/src/
     Input.*             WndProc subclass (hotkeys), GetRawInputData hook (camera lock)
     GameInputHook.cpp   GameInput v3 hooks: hides mouse/keys from the game while the menu is open
   modules/              Toggleable features
-    Module.h            Base class every feature derives from
-    ModuleManager.*     Owns the modules, dispatches ticks / renders / key presses
+    Module.h            Base class every feature derives from (+ Category)
+    Setting.*           Typed settings (bool / float / color) the menu draws and the config saves
+    Config.*            Saves / loads %LOCALAPPDATA%\PotatoClient\config.json
+    ModuleManager.*     Owns the modules, dispatches ticks (by priority) / renders / key presses
     MoveInput.*         Helper: WASD / Space / Shift -> a direction for movement modules
     Xray, Fly, Speed, Aimbox, InventoryView, AutoTotem   (.h + .cpp each)
   commands/             Things typed into the command bar
     Command.h           Base class every command derives from
     CommandManager.*    Owns the commands, parses the line, also defines `help`
+    Args.h              Strict number parsing for arguments
+    Require.*           Shared checks with a message: in a world, own world, holding an item, ...
     UpCommand, MoveCommands (vclip / hclip / tp), DupeCommand, EnchantCommand
   sdk/                  Everything that knows the game's memory layout
     Offsets.h           ALL offsets, vtable indices and signatures
-    Actor.h             Thin views over game objects: Actor, Container, ItemStack, Vec3, AABB, ...
+    GameObject.h        Base of the views below: at<T>(offset)
+    Actor.h             Thin views over game objects: Actor (+ refs()), Container, ItemStack, Vec3, AABB, ...
     PlayerTick.*        normalTick hooks: our way onto the client and server game threads
     PlayerItems.*       Inventory / selected slot / off hand access
     ActorList.*         All entities in the level
@@ -87,7 +97,7 @@ then the game-memory layer.
 3. **`render/Renderer.cpp`**, then **`gui/Input.cpp`** and **`gui/Menu.cpp`**. This is how a frame
    gets drawn (`hkPresent` → backend → `Menu::render`) and how keys reach the client
    (`hookedWndProc`). You can skim the D3D backends.
-4. **`modules/Module.h`** and **`modules/ModuleManager.cpp`**. This is the whole plugin model: a base class with
+4. **`modules/Module.h`**, **`modules/Setting.h`** and **`modules/ModuleManager.cpp`**. This is the whole plugin model: a base class with
    virtual hooks and a list that is built in `ModuleManager::init()`.
 5. **One small module**: `modules/Speed.cpp` (about 20 lines), then `modules/Fly.cpp`. They show the
    typical pattern of reading a component of the player and overwriting it every tick.
@@ -128,8 +138,14 @@ The rules that follow from this:
   - `PlayerTick::runOnOwnServerPlayer(fn)` runs `fn` on the server thread with *our* ServerPlayer.
   - `PlayerTick::runOnSelf(fn)` runs `fn` on whichever player owns our real position: the ServerPlayer
     when the server is local, otherwise the LocalPlayer.
+  - `PlayerTick::runOnServerThenClient(serverFn, clientFn)` changes the server's copy first, then
+    the client's copy the same way (dupe and enchant use it).
 - **Data shared between onTick and onRender needs a lock.** `Aimbox` and `InventoryView` take a
   copy in `onTick` under a `std::mutex` member and draw from that copy in `onRender`.
+- **Flags and settings read on several threads are atomic.** `Setting` values, `Module::isEnabled`,
+  and `InputFocus` (is the menu open?) can be read from any thread without a lock.
+- **Every detour starts with `InFlight::Guard guard;`.** Unloading waits until no thread is inside
+  one of our hooks before the DLL is freed (`core/InFlight.h`). Add it to any new hook.
 - **Write on the server when there is one.** In single-player, the built-in server owns the real
   state. If you only change the client's copy, the server overwrites it (this is why UP, dupe
   and AutoTotem all write on the server side).
@@ -141,42 +157,60 @@ The rules that follow from this:
 
 ```cpp
 class Module {
-    Module(std::string name, std::string description, int key);   // key = virtual-key code, 0 = unbound
+    // category = menu tab; key = virtual-key code, 0 = unbound
+    Module(std::string name, std::string description, Category category, int key);
     virtual bool onEnable();          // return false to refuse being enabled
     virtual void onDisable();
-    virtual void renderSettings();    // ImGui widgets inside the menu's "設定" (Settings) node
-    virtual bool isAvailable() const; // false = a signature was not found, so the checkbox is disabled
+    virtual void renderSettings();    // the menu's "設定" node; default: every registered Setting
+    virtual bool isAvailable() const; // false = a hook / signature it needs is missing: checkbox disabled
     virtual void onTick(Actor& player);  // every client tick while enabled (client game thread)
     virtual void onRender();             // every frame while enabled (render thread)
+    virtual void saveExtra(nlohmann::json&);        // config state that isn't a Setting (Xray's lists)
+    virtual void loadExtra(const nlohmann::json&);
+protected:
+    void addSettings({ &m_speed, ... });   // register Setting members (menu + config)
+    void setTickPriority(int);             // higher = onTick runs later, so its writes win
 };
 ```
 
-- **Registration**: `ModuleManager::init()` (`modules/ModuleManager.cpp:22-32`) pushes each module
-  into a list. The order matters: later modules' `onTick` runs after earlier ones, which is
-  why Fly comes after Speed (Fly wins when both are on).
-- **Menu**: `Menu::render()` (`gui/Menu.cpp`) loops over `ModuleManager::modules()` and draws a
-  checkbox, a key-bind button, the description and the Settings tree for each. A new module
-  appears there automatically.
+- **Registration**: `ModuleManager::init()` (`modules/ModuleManager.cpp`) creates each module.
+  The list order is the order inside each menu tab. The `onTick` order is a separate list sorted
+  by `tickPriority()`: Fly has priority 1, so when Fly and Speed are both on, Fly's velocity wins.
+- **Settings**: a module keeps `FloatSetting` / `BoolSetting` / `ColorSetting` members
+  (`modules/Setting.h`) and registers them with `addSettings`. Each has a stable English id (the
+  config key - don't rename it), a Japanese label, limits and an optional hint. The menu draws
+  them and the config saves them; the module only reads them (`m_speed` converts to `float`).
+- **Menu**: `Menu::render()` (`gui/Menu.cpp`) shows one tab per `Category` and, for each module in
+  it, a checkbox, a key-bind button, the description and the Settings tree. A new module appears
+  there automatically.
 - **Ticks**: `ModuleManager::init()` registers `onClientTick` with
   `PlayerTick::setClientTickListener`, so every client tick calls `onTick` on each enabled module.
 - **Keys**: `hookedWndProc` → `ModuleManager::onKey(vk)` → `toggle()` on every module bound to that key.
-- **Unload**: `ModuleManager::shutdown()` disables all modules. Put cleanup in `onDisable` (Xray
-  uses it to restore the original block data).
-
-There is no config file. Settings are plain member fields and reset when the DLL is reloaded.
+- **Config**: `ModuleManager::init()` ends with `Config::load()` (key binds, settings, and turns on
+  what was on last time). `Config::save()` runs when the menu closes and on unload.
+  The file is `%LOCALAPPDATA%\PotatoClient\config.json`; its exact path is logged.
+- **Unload**: `ModuleManager::shutdown()` saves the config, then disables all modules. Put cleanup in
+  `onDisable` (Xray uses it to restore the original block data).
 
 ### Commands (`commands/Command.h`)
 
 ```cpp
 class Command {
-    Command(std::string name, std::string description);   // name in lower case
+    // name in lower case; usage = how to type it ("tp <x> <y> <z> ...")
+    Command(std::string name, std::string description, std::string usage);
     virtual void execute(const std::vector<std::string>& args) = 0;   // args[0] = the name
 };
 ```
 
-- **Registration**: `CommandManager::init()` (`commands/CommandManager.cpp:37-45`).
+- **Registration**: `CommandManager::init()` (`commands/CommandManager.cpp`).
 - **Parsing**: `CommandManager::execute(line)` strips a leading `.` or spaces, splits on whitespace,
-  lower-cases the first word and finds the matching command. `help` lists all of them.
+  lower-cases the first word and finds the matching command. `help` lists all of them, one per
+  line; `help <name>` shows that command's usage.
+- **Arguments**: parse numbers with `Args::parseInt` / `Args::parseFloat` (empty result = not a
+  number) and answer bad input with `CommandManager::printUsage(*this)`.
+- **Checks**: `Require::inWorld()`, `Require::ownWorld()`, `Require::playerRefs(player)` and
+  `Require::heldItem(player, message)` print the reason themselves, so a command just returns
+  when one fails.
 - **Threading**: `execute` runs on the render thread, so use `PlayerTick::run*` for anything
   that touches the game, and `CommandManager::print` to report.
 
@@ -189,7 +223,12 @@ The game has no symbols, so the SDK locates things in three ways. All of them ar
 |---|---|---|
 | **Field offsets** | `Offsets::Actor::stateVector = 0x218` | `Actor.h` turns them into accessors (`player.stateVector()`) |
 | **Virtual function slots** | `Offsets::Actor::VIndex::teleportTo = 21` | `Memory::callVirtual<Ret, Args...>(obj, index, args...)` |
-| **Byte signatures** | `Offsets::Sig::localPlayerVtable` | `Memory::findSig(pattern)` scans the exe; `Memory::resolveRel32` follows the `lea`/`call` operand to the real address |
+| **Byte signatures** | `Offsets::Sig::localPlayerVtable` | `Memory::scanOrLog(name, pattern)` scans the exe and logs the result (and warns if it matches more than once); `Memory::resolveRel32` follows the `lea`/`call` operand to the real address |
+
+The views over game objects (`Actor`, `ItemStack`, `Block`, `BlockType`) derive from `GameObject`,
+which provides `at<T>(offset)`. They have no data and no virtual functions, so `this` is exactly
+the game's object. `Actor::refs()` returns the state, hitbox and rotation components together,
+or nothing if one is missing - check it once instead of three null checks.
 
 Guidelines that the existing code follows:
 
@@ -202,8 +241,9 @@ Guidelines that the existing code follows:
 - **Never hard-code an address.** The exe is relocated (ASLR) and changes with every update. Use
   a signature, or follow pointers from an object you already have.
 - **Fail safely when a signature is missing.** A feature must disable itself instead of crashing.
-  Commands check an `available()` function first (`EnchantCommand` checks `CommandSender::available()`).
-  A module that depends on a signature should override `isAvailable()`. The menu then disables its
+  Commands check an `available()` function first (`EnchantCommand` checks `Enchant::available()` and
+  `CommandSender::available()`). A module that depends on a hook or signature overrides
+  `isAvailable()` (the `onTick` modules return `PlayerTick::hooked(...)`). The menu then disables its
   checkbox and shows 「シグネチャ未検出のため無効」 ("disabled: signature not found").
 
 ## 7. Naming and style conventions
@@ -230,33 +270,49 @@ command messages) are in Japanese. Keep that split.
    ```cpp
    #pragma once
    #include "Module.h"
+   #include "sdk/PlayerTick.h"
 
    // One line: what it does
    class MyModule : public Module {
    public:
-       MyModule() : Module("MyModule", "説明 (shown in the menu)", 0) {}
+       MyModule() : Module("MyModule", "説明 (shown in the menu)", Category::Movement, 0) {
+           addSettings({ &m_value, &m_enabledThing });
+       }
        void onTick(Actor& player) override;
-       void renderSettings() override;
+       // onTick needs the player tick hook
+       bool isAvailable() const override { return PlayerTick::hooked(PlayerTick::Side::Client); }
 
    private:
-       float m_value = 1.0f;
+       // id (config key, never rename), label, default, min, max, slider format, hint
+       FloatSetting m_value{ "value", "値", 1.0f, 0.1f, 5.0f, "%.2f", "ヒント (任意)" };
+       BoolSetting m_enabledThing{ "thing", "何かを有効にする", true };
    };
    ```
 2. Create `client/src/modules/MyModule.cpp`. Implement `onTick` (game thread) and/or
-   `onRender` (render thread). `Speed.cpp` is a good template.
+   `onRender` (render thread). `Speed.h` / `Speed.cpp` is a good template. The menu and the
+   config file pick up the registered settings by themselves.
 3. Add `#include "MyModule.h"` and `g_modules.push_back(std::make_unique<MyModule>());` to
    `ModuleManager::init()`.
 4. Rebuild. CMake picks up new `.cpp` files automatically (`file(GLOB_RECURSE ... CONFIGURE_DEPENDS)`).
 
 ### Adding a command
 
-1. Declare a class deriving from `Command` (see `commands/UpCommand.h`).
+1. Declare a class deriving from `Command` with a name, a description and a usage string
+   (see `commands/MoveCommands.h`).
 2. In `execute`, validate `args`, then schedule the actual work:
    ```cpp
-   PlayerTick::runOnSelf([](Actor& player, bool server) {
-       // game thread: safe to touch `player` here
-   });
-   CommandManager::print("...");
+   void MyCommand::execute(const std::vector<std::string>& args) {
+       const auto amount = args.size() > 1 ? Args::parseFloat(args[1]) : std::nullopt;
+       if (!amount) { CommandManager::printUsage(*this); return; }
+       if (!Require::inWorld()) return;
+
+       PlayerTick::runOnSelf([value = *amount](Actor& player, bool server) {
+           // game thread: safe to touch `player` here
+           const auto refs = Require::playerRefs(player);
+           if (!refs) return;
+           CommandManager::print("...");
+       });
+   }
    ```
 3. Register it in `CommandManager::init()`.
 

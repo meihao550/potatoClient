@@ -74,7 +74,7 @@ void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
 
 void VClipCommand::execute(const std::vector<std::string>& args) {
     const auto blocks = args.size() >= 2 ? parseNumber(args[1]) : std::nullopt;
-    if (!blocks) { CommandManager::print("使い方: vclip <ブロック数>  (例: vclip 10 / vclip -5)"); return; }
+    if (!blocks) { CommandManager::printUsage(*this); return; }
     if (!inWorld()) return;
 
     PlayerTick::runOnSelf([dy = *blocks](Actor& player, bool server) {
@@ -90,7 +90,7 @@ void VClipCommand::execute(const std::vector<std::string>& args) {
 
 void HClipCommand::execute(const std::vector<std::string>& args) {
     const auto blocks = args.size() >= 2 ? parseNumber(args[1]) : std::nullopt;
-    if (!blocks) { CommandManager::print("使い方: hclip <ブロック数>  (例: hclip 5)"); return; }
+    if (!blocks) { CommandManager::printUsage(*this); return; }
     if (!inWorld()) return;
 
     PlayerTick::runOnSelf([distance = *blocks](Actor& player, bool server) {
@@ -107,7 +107,7 @@ void HClipCommand::execute(const std::vector<std::string>& args) {
 }
 
 void TpCommand::execute(const std::vector<std::string>& args) {
-    if (args.size() != 4) { CommandManager::print("使い方: tp <x> <y> <z>  (~ で相対。例: tp ~ ~20 ~)"); return; }
+    if (args.size() != 4) { CommandManager::printUsage(*this); return; }
     if (!inWorld()) return;
 
     PlayerTick::runOnSelf([args](Actor& player, bool server) {

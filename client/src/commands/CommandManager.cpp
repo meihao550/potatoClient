@@ -16,12 +16,26 @@ namespace {
     std::string g_message;
     ULONGLONG g_messageTime = 0;
 
+    Command* find(const std::string& name) {
+        const std::string key = Util::toLower(name);
+        for (const auto& c : g_commands)
+            if (c->name() == key) return c.get();
+        return nullptr;
+    }
+
+    // "help": one line per command. "help tp": how to use that command.
     class HelpCommand : public Command {
     public:
-        HelpCommand() : Command("help", "コマンド一覧を表示") {}
-        void execute(const std::vector<std::string>&) override {
-            std::string text;
-            for (const auto& c : g_commands) text += (text.empty() ? "" : " / ") + c->name() + ": " + c->description();
+        HelpCommand() : Command("help", "コマンド一覧 / 使い方を表示", "help [コマンド名]") {}
+        void execute(const std::vector<std::string>& args) override {
+            if (args.size() >= 2) {
+                const Command* c = find(args[1]);
+                if (!c) { CommandManager::print("不明なコマンド: " + args[1]); return; }
+                CommandManager::print(c->name() + ": " + c->description() + "\n使い方: " + c->usage());
+                return;
+            }
+            std::string text = "コマンド一覧 (help <名前> で使い方):";
+            for (const auto& c : g_commands) text += "\n  " + c->name() + " - " + c->description();
             CommandManager::print(text);
         }
     };
@@ -44,16 +58,19 @@ void CommandManager::execute(const std::string& line) {
     std::istringstream in(line.substr(start));
     std::vector<std::string> args;
     for (std::string word; in >> word;) args.push_back(word);
+    if (args.empty()) return;
 
-    const std::string name = Util::toLower(args[0]);
-    for (const auto& c : g_commands) {
-        if (c->name() == name) {
-            LOG("command: %s", line.c_str());
-            c->execute(args);
-            return;
-        }
+    Command* command = find(args[0]);
+    if (!command) {
+        print("不明なコマンド: " + args[0] + "  (help で一覧)");
+        return;
     }
-    print("不明なコマンド: " + args[0] + "  (help で一覧)");
+    LOG("command: %s", line.c_str());
+    command->execute(args);
+}
+
+void CommandManager::printUsage(const Command& command) {
+    print("使い方: " + command.usage());
 }
 
 void CommandManager::print(const std::string& message) {

@@ -15,7 +15,8 @@ public:
     virtual bool isAvailable() const { return true; }  // false = signatures missing
     // Every client tick while enabled, on the game thread, with our LocalPlayer
     virtual void onTick(Actor& /*player*/) {}
-    virtual void onRender(){} 
+    // Every frame while enabled, on the render thread (draw with ImGui)
+    virtual void onRender() {}
 
     void setEnabled(bool on) {
         if (on == m_enabled || (on && !isAvailable())) return;

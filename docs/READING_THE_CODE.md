@@ -74,3 +74,36 @@ client/src/
 
 Build output goes to `build/` and dumps go to `dump/`. Both are ignored by git.
 
+## 3. Suggested reading order
+
+Read top-down: first how the DLL gets control, then the framework, then one feature,
+then the game-memory layer.
+
+1. **`client/src/dllmain.cpp`** (about 50 lines). `DllMain` only starts a thread, and `mainThread`
+   shows the complete start-up order and the unload sequence. Every subsystem you meet later is
+   initialized here.
+2. **`core/`**. `Hooks.h` (one function you will see everywhere), `Logger.h` (`LOG`), and
+   `Memory.h`. In `Memory.h`, understand `findSig`, `resolveRel32` and `callVirtual` before going
+   further; the SDK is built on them.
+3. **`render/Renderer.cpp`**, then **`gui/Input.cpp`** and **`gui/Menu.cpp`**. This is how a frame
+   gets drawn (`hkPresent` → backend → `Menu::render`) and how keys reach the client
+   (`hookedWndProc`). You can skim the D3D backends.
+4. **`modules/Module.h`** and **`modules/ModuleManager.cpp`**. This is the whole plugin model: a base class with
+   virtual hooks and a list that is built in `ModuleManager::init()`.
+5. **One small module**: `modules/Speed.cpp` (about 20 lines), then `modules/Fly.cpp`. They show the
+   typical pattern of reading a component of the player and overwriting it every tick.
+6. **`sdk/Offsets.h`**, then **`sdk/Actor.h`**. These show how raw offsets become typed accessors like
+   `player.stateVector()`.
+7. **`sdk/PlayerTick.h` / `.cpp`**. This is the most important piece of infrastructure: how code gets to run
+   on the game's own threads (see the next section).
+8. **`sdk/PlayerItems.cpp`**, then **`modules/AutoTotem.cpp`**. This is a complete feature that reads on the
+   client and writes on the server.
+9. Then anything you are curious about: `modules/Xray.cpp` + `sdk/BlockRegistry.cpp` (data
+   patching instead of hooking), `sdk/CommandSender.cpp` (building a network packet),
+   `modules/Aimbox.cpp` (world-to-screen projection).
+
+Many `.cpp` files start with a block comment that explains the technique (for example
+`Fly.cpp`, `AutoTotem.cpp`, `PlayerItems.cpp`, `CommandSender.cpp`). Read those first.
+The "How it works" section of [README.en.md](../README.en.md#how-it-works) explains how each
+address and offset was found.
+

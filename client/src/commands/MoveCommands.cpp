@@ -1,4 +1,5 @@
 #include "MoveCommands.h"
+#include "Args.h"
 #include "CommandManager.h"
 #include "core/Util.h"
 #include "sdk/Actor.h"
@@ -21,18 +22,11 @@
  */
 
 namespace {
-    std::optional<float> parseNumber(const std::string& text) {
-        char* end = nullptr;
-        const float value = std::strtof(text.c_str(), &end);
-        if (text.empty() || *end || !std::isfinite(value)) return std::nullopt;
-        return value;
-    }
-
     // "12.5" -> 12.5, "~" -> current, "~3" -> current + 3
     std::optional<float> parseCoordinate(const std::string& text, float current) {
-        if (text.empty() || text[0] != '~') return parseNumber(text);
+        if (text.empty() || text[0] != '~') return Args::parseFloat(text);
         if (text.size() == 1) return current;
-        const auto offset = parseNumber(text.substr(1));
+        const auto offset = Args::parseFloat(text.substr(1));
         return offset ? std::optional<float>(current + *offset) : std::nullopt;
     }
 
@@ -73,7 +67,7 @@ void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
 }
 
 void VClipCommand::execute(const std::vector<std::string>& args) {
-    const auto blocks = args.size() >= 2 ? parseNumber(args[1]) : std::nullopt;
+    const auto blocks = args.size() >= 2 ? Args::parseFloat(args[1]) : std::nullopt;
     if (!blocks) { CommandManager::printUsage(*this); return; }
     if (!inWorld()) return;
 
@@ -89,7 +83,7 @@ void VClipCommand::execute(const std::vector<std::string>& args) {
 }
 
 void HClipCommand::execute(const std::vector<std::string>& args) {
-    const auto blocks = args.size() >= 2 ? parseNumber(args[1]) : std::nullopt;
+    const auto blocks = args.size() >= 2 ? Args::parseFloat(args[1]) : std::nullopt;
     if (!blocks) { CommandManager::printUsage(*this); return; }
     if (!inWorld()) return;
 

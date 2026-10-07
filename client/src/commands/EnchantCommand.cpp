@@ -1,11 +1,11 @@
 #include "EnchantCommand.h"
+#include "Args.h"
 #include "CommandManager.h"
 #include "core/Util.h"
 #include "sdk/CommandSender.h"
 #include "sdk/Enchant.h"
 #include "sdk/PlayerTick.h"
 #include <cstdio>
-#include <cstdlib>
 #include <utility>
 
 /*
@@ -127,7 +127,12 @@ void EnchantCommand::execute(const std::vector<std::string>& args) {
             CommandManager::print("不明なエンチャント: " + args[1] + "  (enchant list で一覧)");
             return;
         }
-        int level = args.size() > 2 ? std::atoi(args[2].c_str()) : info->maxLevel;
+        int level = info->maxLevel;
+        if (args.size() > 2) {
+            const auto parsed = Args::parseInt(args[2]);
+            if (!parsed) { CommandManager::printUsage(*this); return; }
+            level = *parsed;
+        }
         if (level < 1) level = 1;
         if (level > 255) level = 255;
         wanted.push_back({ info->id, level });

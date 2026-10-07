@@ -77,6 +77,28 @@ namespace {
         if (!GetKeyNameTextA(static_cast<LONG>(scan << 16), out, size))
             snprintf(out, size, "VK 0x%02X", vk);
     }
+
+    // One module in the menu: on/off, key bind, description, settings
+    void renderModule(Module& m) {
+        ImGui::PushID(&m);
+        bool enabled = m.isEnabled();
+        ImGui::BeginDisabled(!m.isAvailable());
+        if (ImGui::Checkbox(m.name().c_str(), &enabled)) m.setEnabled(enabled);
+        ImGui::EndDisabled();
+
+        ImGui::SameLine(200);
+        char label[64];
+        if (g_binding == &m) snprintf(label, sizeof(label), "キーを押して… (Escで解除)");
+        else { char k[32]; keyName(m.key(), k, sizeof(k)); snprintf(label, sizeof(label), "キー: %s", k); }
+        if (ImGui::Button(label)) g_binding = &m;
+
+        ImGui::TextDisabled("%s", m.description().c_str());
+        if (!m.isAvailable())
+            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "シグネチャ未検出のため無効 (client.log を確認)");
+        if (!m.settings().empty() && ImGui::TreeNode("設定")) { m.renderSettings(); ImGui::TreePop(); }
+        ImGui::Separator();
+        ImGui::PopID();
+    }
 }
 
 void Menu::loadFonts() {
@@ -125,25 +147,15 @@ void Menu::render() {
     bool keepOpen = true;   // the window's close button
     ImGui::Begin("PotatoClient  (Insert: 閉じる / End: アンロード)", &keepOpen);
 
-    for (auto& m : ModuleManager::modules()) {
-        ImGui::PushID(m.get());
-        bool enabled = m->isEnabled();
-        ImGui::BeginDisabled(!m->isAvailable());
-        if (ImGui::Checkbox(m->name().c_str(), &enabled)) m->setEnabled(enabled);
-        ImGui::EndDisabled();
-
-        ImGui::SameLine(200);
-        char label[64];
-        if (g_binding == m.get()) snprintf(label, sizeof(label), "キーを押して… (Escで解除)");
-        else { char k[32]; keyName(m->key(), k, sizeof(k)); snprintf(label, sizeof(label), "キー: %s", k); }
-        if (ImGui::Button(label)) g_binding = m.get();
-
-        ImGui::TextDisabled("%s", m->description().c_str());
-        if (!m->isAvailable())
-            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "シグネチャ未検出のため無効 (client.log を確認)");
-        if (ImGui::TreeNode("設定")) { m->renderSettings(); ImGui::TreePop(); }
-        ImGui::Separator();
-        ImGui::PopID();
+    // One tab per category, modules in registration order inside it
+    if (ImGui::BeginTabBar("categories")) {
+        for (Category category : { Category::Movement, Category::Render, Category::Player }) {
+            if (!ImGui::BeginTabItem(categoryName(category))) continue;
+            for (auto& m : ModuleManager::modules())
+                if (m->category() == category) renderModule(*m);
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
     }
     ImGui::End();
     if (!keepOpen) InputFocus::menuOpen = false;

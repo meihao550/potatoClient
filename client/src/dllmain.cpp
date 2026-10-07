@@ -11,24 +11,39 @@
 
 HMODULE g_module = nullptr;
 
+namespace {
+    // Hooks everything. false = nothing usable was installed (no menu, so End could never unload us).
+    bool initAll() {
+        if (!Hooks::init()) return false;
+        // Each step logs its own details; a missing signature only disables the features that need it
+        ModuleManager::init();   // module hooks (Xray, ...)
+        if (!PlayerTick::init())     // normalTick hooks = our way onto the client/server threads
+            LOG("warning: player tick hooks incomplete - modules and commands that need the game thread won't run");
+        if (!Enchant::init())        // EnchantUtils::applyEnchant for the enchant command
+            LOG("warning: enchant is unavailable");
+        if (!CommandSender::init())  // CommandRequestPacket: send /commands to a remote server
+            LOG("warning: commands can't be sent to remote servers");
+        CommandManager::init();      // commands for the command bar (up, help)
+        if (!Input::init())          // raw input filter
+            LOG("warning: raw input hook failed - the camera may move while the menu is open");
+        if (!Renderer::init()) {     // Present hook -> ImGui menu (and the WndProc that reads End)
+            LOG("renderer hooks failed - without a menu there is no way to unload, so unloading now");
+            return false;
+        }
+        return true;
+    }
+}
+
 static DWORD WINAPI mainThread(LPVOID) {
     Logger::init();
     LOG("Injected! Minecraft.Windows.exe base = %p", GetModuleHandleW(nullptr));
 
-    if (Hooks::init()) {
-        ModuleManager::init();   // module hooks (Xray, ...)
-        PlayerTick::init();      // normalTick hooks = our way onto the client/server threads
-        Enchant::init();         // EnchantUtils::applyEnchant for the enchant command
-        CommandSender::init();   // CommandRequestPacket: send /commands to a remote server
-        CommandManager::init();  // commands for the command bar (up, help)
-        Input::init();           // raw input filter
-        Renderer::init();        // Present hook -> ImGui menu
-    }
-    LOG("ready. Insert = menu, Home = command, End = unload");
-
-    while (!Input::unloadRequested) {
-        Input::hookGameInput();   // needs a mouse/keyboard reading to exist, so keep trying
-        Sleep(100);
+    if (initAll()) {
+        LOG("ready. Insert = menu, Home = command, End = unload");
+        while (!Input::unloadRequested) {
+            Input::hookGameInput();   // needs a mouse/keyboard reading to exist, so keep trying
+            Sleep(100);
+        }
     }
 
     LOG("unloading...");

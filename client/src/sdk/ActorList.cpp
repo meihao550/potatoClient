@@ -2,41 +2,38 @@
 #include "core/Logger.h"
 #include <Windows.h>
 
-// ==========================================================
-// このファイルの仕事:
-//   ゲームから「ワールドにいるエンティティ全員のリスト」をもらってくる
-// ==========================================================
+/*
+ * Every actor in the level
+ * ------------------------
+ * Level has a virtual getRuntimeActorList() that returns std::vector<Actor*> by value.
+ * A function that returns a class by value takes a hidden pointer to the result as its
+ * first argument after `this`, so we pass an empty vector-shaped struct and the game
+ * fills it in.
+ *
+ * The vector's buffer was allocated by the game's CRT (ucrtbase.dll). This DLL links the
+ * CRT statically, so its own free() would use a different heap - we give the buffer back
+ * with ucrtbase's free instead.
+ */
 
-namespace {   // ← この中のものはこのファイルの中だけで使う、という意味
-
-    // ---------------------------------------------------------
-    // ゲームが返してくるリストの形
-    // std::vector の中身は、実はこの 3 つの住所だけ
-    // ---------------------------------------------------------
+namespace {
+    // MSVC std::vector layout
     struct GameList {
-        Actor** first;   // リストの先頭の住所
-        Actor** last;    // 最後の要素の「次」の住所
-        Actor** end;     // 借りたメモリの終わり(今回は使わない)
+        Actor** first;   // first element
+        Actor** last;    // one past the last element
+        Actor** end;     // end of the allocation (unused)
     };
 
-    // ---------------------------------------------------------
-    // 「ゲームの図書館の返却窓口」= ucrtbase.dll の free 関数を探す
-    // (この DLL は静的 CRT なので、自分の free で返すとクラッシュする)
-    // ---------------------------------------------------------
-    using FreeFunction = void (*)(void* memory);   // 「住所を 1 つ受け取って何も返さない関数」に名前を付けた
+    using FreeFunction = void (*)(void* memory);
 
     FreeFunction findGameFree() {
-        HMODULE ucrt = GetModuleHandleW(L"ucrtbase.dll");   // ゲームが使っている ucrtbase.dll を探す
-        if (ucrt == nullptr) return nullptr;                 // 見つからなかった
-        void* address = GetProcAddress(ucrt, "free");        // その中の "free" という関数の住所を探す
-        return reinterpret_cast<FreeFunction>(address);      // 「ただの住所」を「関数」として扱う
+        HMODULE ucrt = GetModuleHandleW(L"ucrtbase.dll");
+        if (ucrt == nullptr) return nullptr;
+        return reinterpret_cast<FreeFunction>(GetProcAddress(ucrt, "free"));
     }
 
-    // ---------------------------------------------------------
-    // 番号 (VIndex) が合っているかの確認用ログ (最初の 1 回だけ出す)
-    // ---------------------------------------------------------
+    // Logged once, to check that VIndex::getRuntimeActorList still points at the right function
     void logFunctionAddress(void* level) {
-        void** vtable = *static_cast<void***>(level);   // Level の「仮想関数の一覧表」
+        void** vtable = *static_cast<void***>(level);
         void* function = vtable[Offsets::Level::VIndex::getRuntimeActorList];
         uintptr_t base = Memory::moduleBase();
         LOG("Level vtable = exe+%#llx", (unsigned long long)((uintptr_t)vtable - base));
@@ -53,31 +50,25 @@ namespace {   // ← この中のものはこのファイルの中だけで使�
 }
 
 std::vector<Actor*> ActorList::get(Actor& player) {
-    std::vector<Actor*> result;   // 空のリスト。最後にこれを返す
+    std::vector<Actor*> result;
 
-    // (1) プレイヤーから Level (ワールド全体の管理人) を取り出す
     void* level = player.at<void*>(Offsets::Actor::level);
     if (level == nullptr) return result;
 
-    // (2) 返却窓口を探す。static = 最初の 1 回だけ探して、あとは覚えておく
-    static FreeFunction gameFree = findGameFree();
+    static FreeFunction gameFree = findGameFree();   // looked up once
     if (gameFree == nullptr) return result;
 
     static bool firstTime = true;
     if (firstTime) logFunctionAddress(level);
 
-    // (3) 空の箱を用意して、ゲームの関数に「ここにリストを入れて」と頼む
-    //     (値で返す関数は、箱の住所が this の次の隠し引数になる)
+    // The game fills gameList (hidden return-value pointer, see above)
     GameList gameList{};
     Memory::callVirtual<GameList*, GameList*>(level, Offsets::Level::VIndex::getRuntimeActorList, &gameList);
 
-    // (4) 中身を 1 体ずつ自分のリストにコピーする
-    size_t count = gameList.last - gameList.first;   // 何体いるか
-    for (size_t i = 0; i < count; i++) {
-        result.push_back(gameList.first[i]);          // push_back = Python の append
-    }
+    const size_t count = gameList.last - gameList.first;
+    result.assign(gameList.first, gameList.first + count);
 
-    // (5) ゲームから借りたリストは、ゲームの窓口に返す
+    // The buffer belongs to the game's heap: free it there
     if (gameList.first != nullptr) gameFree(gameList.first);
 
     if (firstTime) {

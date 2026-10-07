@@ -80,3 +80,13 @@ Follow the surrounding code. In short:
 
 Details and examples are in [READING_THE_CODE.md](docs/READING_THE_CODE.md#7-naming-and-style-conventions).
 
+## Adding modules and commands
+
+- **Module**: derive from `Module`, register it in `ModuleManager::init()`.
+- **Command**: derive from `Command`, register it in `CommandManager::init()`.
+
+Step-by-step recipes are in [READING_THE_CODE.md § Recipes](docs/READING_THE_CODE.md#8-recipes).
+When you add a user-visible feature, also document it in both `README.md` (Japanese) and
+`README.en.md` (English). If you only write one language, say so in the pull request and someone
+can translate it.
+

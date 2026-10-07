@@ -8,6 +8,8 @@ Target: **Minecraft Bedrock 1.26.52 (GDK build / `Minecraft.Windows.exe`)**
 > Use it only in single-player or in your own worlds. Using it on public servers or Realms breaks their rules and can get you banned.
 > Some features also work in multiplayer, but only use them on servers that allow it.
 
+New to the code? Start with **[docs/READING_THE_CODE.md](docs/READING_THE_CODE.md)**. Want to contribute? See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
 ## How to use
 
 ### 1. Requirements
@@ -221,6 +223,7 @@ client/src/
 ```
 A new feature derives from `Module` and is registered in `ModuleManager::init()` to show up in the menu.
 A new command derives from `Command` and is registered in `CommandManager::init()` to be usable from the command bar.
+A detailed walkthrough is in [docs/READING_THE_CODE.md](docs/READING_THE_CODE.md).
 
 ## License
 [Apache License 2.0](LICENSE)

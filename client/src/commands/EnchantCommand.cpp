@@ -1,9 +1,9 @@
 #include "EnchantCommand.h"
 #include "CommandManager.h"
+#include "core/Util.h"
 #include "sdk/CommandSender.h"
 #include "sdk/Enchant.h"
 #include "sdk/PlayerTick.h"
-#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <utility>
@@ -25,11 +25,6 @@
 
 namespace {
     using Wanted = std::vector<std::pair<uint8_t, int>>;   // (enchant id, level)
-
-    std::string toLower(std::string s) {
-        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return s;
-    }
 
     const Enchant::Info* byId(uint8_t id) {
         for (const auto& e : Enchant::all())
@@ -114,7 +109,7 @@ namespace {
 
 void EnchantCommand::execute(const std::vector<std::string>& args) {
     using PlayerTick::Side;
-    if (args.size() < 2 || toLower(args[1]) == "list") {
+    if (args.size() < 2 || Util::toLower(args[1]) == "list") {
         printList();
         return;
     }
@@ -124,7 +119,7 @@ void EnchantCommand::execute(const std::vector<std::string>& args) {
     }
 
     Wanted wanted;
-    if (toLower(args[1]) == "all") {
+    if (Util::toLower(args[1]) == "all") {
         for (uint8_t id : Enchant::bestSet()) wanted.push_back({ id, byId(id)->maxLevel });
     } else {
         const Enchant::Info* info = Enchant::find(args[1]);

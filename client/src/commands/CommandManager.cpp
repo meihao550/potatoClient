@@ -4,8 +4,8 @@
 #include "MoveCommands.h"
 #include "UpCommand.h"
 #include "core/Logger.h"
+#include "core/Util.h"
 #include <Windows.h>
-#include <cctype>
 #include <mutex>
 #include <sstream>
 
@@ -15,11 +15,6 @@ namespace {
     std::mutex g_messageMutex;
     std::string g_message;
     ULONGLONG g_messageTime = 0;
-
-    std::string toLower(std::string s) {
-        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return s;
-    }
 
     class HelpCommand : public Command {
     public:
@@ -50,7 +45,7 @@ void CommandManager::execute(const std::string& line) {
     std::vector<std::string> args;
     for (std::string word; in >> word;) args.push_back(word);
 
-    const std::string name = toLower(args[0]);
+    const std::string name = Util::toLower(args[0]);
     for (const auto& c : g_commands) {
         if (c->name() == name) {
             LOG("command: %s", line.c_str());

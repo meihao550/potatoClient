@@ -1,4 +1,5 @@
 #include "Aimbox.h"
+#include "core/Util.h"
 #include "sdk/ActorList.h"
 #include <Windows.h>
 #include <imgui.h>
@@ -13,7 +14,7 @@
  */
 
 namespace {
-    constexpr float kDegToRad = 3.14159265f / 180.0f;
+    using Util::kDegToRad;
 
     Vec3 sub(Vec3 a, Vec3 b) { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
     float dot(Vec3 a, Vec3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }

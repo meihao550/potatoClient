@@ -1,5 +1,6 @@
 #include "MoveCommands.h"
 #include "CommandManager.h"
+#include "core/Util.h"
 #include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <Windows.h>
@@ -96,7 +97,7 @@ void HClipCommand::execute(const std::vector<std::string>& args) {
 
     PlayerTick::runOnSelf([distance = *blocks](Actor& player, bool server) {
         if (!ready(player)) return;
-        const float yaw = player.rotation()->yaw * 3.14159265f / 180.0f;
+        const float yaw = player.rotation()->yaw * Util::kDegToRad;
         Vec3 to = feetOf(player);
         to.x += -std::sin(yaw) * distance;   // yaw 0 = +Z, yaw -90 = +X
         to.z += std::cos(yaw) * distance;

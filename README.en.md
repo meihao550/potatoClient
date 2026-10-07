@@ -75,3 +75,11 @@ Reading the menu:
    - Changing only the render distance rebuilds just the chunks that newly come into range, so only some of them become transparent
 4. After turning Xray off, toggle Smooth Lighting the same way to get the normal look back.
 
+### 6. The UP command (get to the surface)
+1. In a world, press **Home**. A command bar appears in the top-left corner.
+2. Type `up` and press **Enter** (`.up` and `UP` also work).
+3. You are teleported onto the highest block directly above your X/Z, and the result is shown in the top-left for a few seconds.
+   - Water surfaces and leaves count as "ground" (on the sea you land on the water, under a tree you land on top of it)
+   - In the Nether the bedrock ceiling is the highest block, so you end up above the ceiling
+   - `help` lists the commands, Esc closes the bar
+

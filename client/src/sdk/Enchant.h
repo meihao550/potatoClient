@@ -11,7 +11,8 @@ namespace Enchant {
         int maxLevel;           // vanilla max level
     };
 
-    bool init();   // finds EnchantUtils::applyEnchant (signature)
+    bool init();        // finds EnchantUtils::applyEnchant (signature)
+    bool available();   // false = the signature was not found, apply() can't work
     const std::vector<Info>& all();
     // English id (case-insensitive) or Japanese name. nullptr if unknown
     const Info* find(const std::string& name);

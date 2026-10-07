@@ -112,6 +112,11 @@ void EnchantCommand::execute(const std::vector<std::string>& args) {
         return;
     }
     if (!Require::inWorld()) return;
+    // Both paths need applyEnchant: directly in single-player, to test which enchants fit before sending otherwise
+    if (!Enchant::available()) {
+        CommandManager::print("エンチャントの関数が見つかりません (シグネチャ未検出: client.log を確認)");
+        return;
+    }
 
     Wanted wanted;
     if (Util::toLower(args[1]) == "all") {

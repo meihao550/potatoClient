@@ -90,6 +90,8 @@ bool Enchant::init() {
     return g_applyEnchant != nullptr;
 }
 
+bool Enchant::available() { return g_applyEnchant != nullptr; }
+
 const std::vector<Enchant::Info>& Enchant::all() { return g_enchants; }
 const std::vector<uint8_t>& Enchant::bestSet() { return g_bestSet; }
 

@@ -107,3 +107,32 @@ Many `.cpp` files start with a block comment that explains the technique (for ex
 The "How it works" section of [README.en.md](../README.en.md#how-it-works) explains how each
 address and offset was found.
 
+## 4. Threading model
+
+This is the rule that matters most when changing code. Game objects may only be touched on
+the thread that owns them. The client code runs on five different threads:
+
+| Thread | Entered through | What runs there |
+|---|---|---|
+| **Init thread** | `CreateThread` in `DllMain` | Start-up, the retry loop for `Input::hookGameInput()`, unload |
+| **Render thread** | `hkPresent` (`render/Renderer.cpp`) | ImGui: `Menu::render`, `Module::onRender`, `Module::renderSettings`, and `Command::execute` (the command bar is ImGui) |
+| **Window thread** | `hookedWndProc` (`gui/Input.cpp`) | Hotkeys: Insert / Home / End, and `ModuleManager::onKey` (toggling a module by its key) |
+| **Client game thread** | `LocalPlayer::normalTick` hook (`sdk/PlayerTick.cpp`) | `Module::onTick(Actor&)` for every enabled module, and client-side tasks |
+| **Server game thread** | `ServerPlayer::normalTick` hook | Server-side tasks. It only exists when the world runs on this PC (single-player or hosting) |
+
+The rules that follow from this:
+
+- **Never touch game objects from the render thread.** Commands run on the render thread, so they
+  schedule work instead:
+  - `PlayerTick::run(Side::Client or Side::Server, fn)` runs `fn` during the next tick of a player on that side.
+    `fn` returns `false` for "not this player", and is dropped after a couple of seconds.
+  - `PlayerTick::runOnOwnServerPlayer(fn)` runs `fn` on the server thread with *our* ServerPlayer.
+  - `PlayerTick::runOnSelf(fn)` runs `fn` on whichever player owns our real position: the ServerPlayer
+    when the server is local, otherwise the LocalPlayer.
+- **Data shared between onTick and onRender needs a lock.** `Aimbox` and `InventoryView` take a
+  copy in `onTick` under a `std::mutex` member and draw from that copy in `onRender`.
+- **Write on the server when there is one.** In single-player, the built-in server owns the real
+  state. If you only change the client's copy, the server overwrites it (this is why UP, dupe
+  and AutoTotem all write on the server side).
+- **Report results with `CommandManager::print()`.** It can be called from any thread.
+

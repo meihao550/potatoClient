@@ -222,3 +222,5 @@ client/src/
 A new feature derives from `Module` and is registered in `ModuleManager::init()` to show up in the menu.
 A new command derives from `Command` and is registered in `CommandManager::init()` to be usable from the command bar.
 
+## License
+[Apache License 2.0](LICENSE)

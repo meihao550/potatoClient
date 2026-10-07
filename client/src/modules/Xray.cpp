@@ -2,6 +2,7 @@
 #include "core/Logger.h"
 #include "sdk/BlockRegistry.h"
 #include <imgui.h>
+#include <nlohmann/json.hpp>
 #include <cstring>
 
 /*
@@ -195,4 +196,29 @@ void Xray::renderSettings() {
     }
 
     if (changed && isEnabled()) apply();
+}
+
+// Config: which ore groups are shown (keyed by their first pattern, which never changes)
+// and the custom block list
+void Xray::saveExtra(nlohmann::json& out) {
+    std::lock_guard lock(m_mutex);
+    nlohmann::json ores = nlohmann::json::object();
+    for (const auto& g : m_groups) ores[g.patterns.front()] = g.visible;
+    out["ores"] = ores;
+    out["custom"] = m_custom;
+}
+
+void Xray::loadExtra(const nlohmann::json& in) {
+    std::lock_guard lock(m_mutex);
+    if (auto ores = in.find("ores"); ores != in.end() && ores->is_object()) {
+        for (auto& g : m_groups) {
+            auto v = ores->find(g.patterns.front());
+            if (v != ores->end() && v->is_boolean()) g.visible = v->get<bool>();
+        }
+    }
+    if (auto custom = in.find("custom"); custom != in.end() && custom->is_array()) {
+        m_custom.clear();
+        for (const auto& c : *custom)
+            if (c.is_string() && !c.get<std::string>().empty()) m_custom.push_back(c.get<std::string>());
+    }
 }

@@ -16,6 +16,8 @@ public:
     bool onEnable() override;
     void onDisable() override;
     void renderSettings() override;
+    void saveExtra(nlohmann::json& out) override;
+    void loadExtra(const nlohmann::json& in) override;
 
 private:
     struct Group {                     // one row in the menu, e.g. "ダイヤ" -> {"diamond_ore"}

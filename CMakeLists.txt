@@ -13,7 +13,11 @@ FetchContent_Declare(minhook
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.91.9)
-FetchContent_MakeAvailable(minhook)
+# JSON for the config file (v3.12.0+ also configures with CMake 4)
+FetchContent_Declare(json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(minhook json)
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)
     FetchContent_Populate(imgui)
@@ -36,7 +40,7 @@ target_compile_definitions(client PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _
 target_compile_options(client PRIVATE /utf-8 /W3 /Zi)
 # PDB for Release too, so crash offsets in the Windows event log can be mapped to source lines
 target_link_options(client PRIVATE /DEBUG /OPT:REF /OPT:ICF)
-target_link_libraries(client PRIVATE minhook imgui d3d11 d3d12 dxgi)
+target_link_libraries(client PRIVATE minhook imgui nlohmann_json::nlohmann_json d3d11 d3d12 dxgi shell32 ole32)
 
 # Injector: ends up next to client.dll (build\Release\injector.exe), no Python needed
 add_executable(injector injector/injector.cpp)

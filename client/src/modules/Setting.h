@@ -1,4 +1,5 @@
 #pragma once
+#include <nlohmann/json_fwd.hpp>
 #include <atomic>
 #include <cstdint>
 #include <string>
@@ -30,6 +31,9 @@ public:
     // Draws the widget (+ the hint under it). Render thread. true = the value changed.
     bool render();
     virtual void reset() = 0;   // back to the default value
+    // Config file (modules/Config.cpp). load ignores a value of the wrong type.
+    virtual void save(nlohmann::json& out) const = 0;
+    virtual void load(const nlohmann::json& in) = 0;
 
 protected:
     virtual bool renderWidget() = 0;
@@ -49,6 +53,8 @@ public:
     operator bool() const { return m_value; }
     void set(bool value) { m_value = value; }
     void reset() override { m_value = m_default; }
+    void save(nlohmann::json& out) const override;
+    void load(const nlohmann::json& in) override;
 
 protected:
     bool renderWidget() override;
@@ -70,6 +76,8 @@ public:
     operator float() const { return m_value; }
     void set(float value) { m_value = value < m_min ? m_min : value > m_max ? m_max : value; }
     void reset() override { m_value = m_default; }
+    void save(nlohmann::json& out) const override;
+    void load(const nlohmann::json& in) override;
 
 protected:
     bool renderWidget() override;
@@ -90,6 +98,8 @@ public:
     uint32_t packed() const { return m_value; }   // 0xAABBGGRR, the same layout as ImU32
     void setPacked(uint32_t rgba) { m_value = rgba; }
     void reset() override { m_value = m_default; }
+    void save(nlohmann::json& out) const override;
+    void load(const nlohmann::json& in) override;
 
 protected:
     bool renderWidget() override;

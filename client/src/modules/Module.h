@@ -43,6 +43,10 @@ public:
     int key() const { return m_key; }
     void setKey(int vk) { m_key = vk; }
     const std::vector<Setting*>& settings() const { return m_settings; }
+    // State that isn't a Setting (e.g. Xray's block lists), for the config file.
+    // Settings registered with addSettings are saved automatically - don't repeat them here.
+    virtual void saveExtra(nlohmann::json& /*out*/) {}
+    virtual void loadExtra(const nlohmann::json& /*in*/) {}
 
 protected:
     // Call in the constructor with the module's Setting members, in menu order

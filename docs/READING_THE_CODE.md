@@ -283,3 +283,9 @@ logged to `client.log` (for example `LocalPlayer vtable signature not found`), s
 
 The full procedure is in [README.en.md](../README.en.md#when-the-game-updates-reverse-engineering-procedure).
 
+## 10. Further reading
+
+- [README.en.md](../README.en.md): usage, plus "How it works" for every feature
+- [README.md](../README.md): the same in Japanese (the original)
+- [docs/ENCHANT.md](ENCHANT.md): the enchant command manual (Japanese only)
+- [CONTRIBUTING.md](../CONTRIBUTING.md): building, testing and sending changes

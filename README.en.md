@@ -197,3 +197,12 @@ The exe has almost no class names (RTTI) and no fixed pointer to the player, so 
 - **Off hand**: not part of the inventory; it is slot 1 of the 2-slot "hand container" returned by `ActorEquipment::getHandContainer(EntityContext&)`. That function has no signature, so its call target is read at runtime from the `mov rsi,rcx / add rcx,8 / call ...` at the start of `Actor::getEquippedTotem` (79) (`Actor+8` is the EntityContext)
 - **AutoTotem**: decides "no totem in the off hand & one in the inventory" from the client-side copy, then on the server thread calls `setItem` (move the off-hand item out of the way) → `setOffhandSlot` (78) → `removeItem` on the ServerPlayer. Since the game's own functions do the moving, no manual sync like dupe's is needed
 
+## When the game updates (reverse-engineering procedure)
+All offsets live in `client/src/sdk/Offsets.h`.
+1. Start the game and enter a world
+2. `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` — restores the encrypted exe from memory into a form Ghidra/IDA can open
+3. Check the struct layouts in [LeviLamina](https://github.com/LiteLDev/LeviLamina)'s `src/mc/world/level/block/BlockType.h` and `Block.h` (they are for BDS, but almost identical to the client)
+4. Read live memory to confirm that known values (names, etc.) are at those offsets, then update `Offsets.h`
+5. For the UP command: check in the disassembly that the `LocalPlayer` / `ServerPlayer` vtable signatures still match exactly one location and that the vtable indices (`VIndex`) are still right
+   - The player can be found by searching memory for the "AABBShapeComponent with a 0.6×1.8 hitbox" and following the Actor that points to it (+0x220)
+

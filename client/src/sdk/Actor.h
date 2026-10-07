@@ -38,14 +38,25 @@ public:
 
 class ItemStack : public GameObject {
 public:
-    // nullptr for an empty slot
+    // The Item (the kind of item), nullptr for an empty slot. The WeakPtr's counter is
+    // read with safeRead: a stale stack (item just destroyed) must not crash us.
     uint8_t* item() {
         auto* counter = at<uint8_t**>(Offsets::ItemStack::item);
-        return counter ? *counter : nullptr;
+        uint8_t* result = nullptr;
+        if (counter) Memory::safeRead(counter, &result, sizeof(result));
+        return result;
     }
     uint8_t& count()      { return at<uint8_t>(Offsets::ItemStack::count); }
-    uint8_t maxStackSize() { return item()[Offsets::Item::maxStackSize]; }
-    const char* name()    { return reinterpret_cast<MsvcString*>(item() + Offsets::Item::fullName)->c_str(); }
+    // 0 for an empty slot
+    uint8_t maxStackSize() {
+        uint8_t* i = item();
+        return i ? i[Offsets::Item::maxStackSize] : 0;
+    }
+    // "minecraft:diamond", "" for an empty slot
+    const char* name() {
+        uint8_t* i = item();
+        return i ? reinterpret_cast<MsvcString*>(i + Offsets::Item::fullName)->c_str() : "";
+    }
     bool isEmpty()        { return !item() || count() == 0; }
 };
 

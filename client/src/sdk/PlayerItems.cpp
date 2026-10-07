@@ -61,15 +61,19 @@ namespace {
 
 Container* PlayerItems::inventory(Actor& player) {
     auto* playerInventory = player.at<uint8_t*>(Offsets::Actor::playerInventory);
-    if (!playerInventory) return nullptr;
-    auto* container = *reinterpret_cast<Container**>(playerInventory + Offsets::PlayerInventory::container);
+    Container* container = nullptr;
+    // safeRead: on a non-player actor (or after a game update) these pointers can be garbage
+    if (!playerInventory ||
+        !Memory::safeRead(playerInventory + Offsets::PlayerInventory::container, &container, sizeof(container)))
+        return nullptr;
     return isValidInventory(container) ? container : nullptr;
 }
 
 int PlayerItems::selectedSlot(Actor& player) {
     auto* playerInventory = player.at<uint8_t*>(Offsets::Actor::playerInventory);
-    if (!playerInventory) return 0;
-    return *reinterpret_cast<int*>(playerInventory + Offsets::PlayerInventory::selected);
+    int slot = 0;
+    if (playerInventory) Memory::safeRead(playerInventory + Offsets::PlayerInventory::selected, &slot, sizeof(slot));
+    return slot >= 0 && slot < hotbarSize ? slot : 0;
 }
 
 Container* PlayerItems::hands(Actor& player) {

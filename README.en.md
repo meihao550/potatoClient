@@ -135,3 +135,10 @@ In single-player, the built-in server's ServerPlayer is moved through the same p
 
 Log: `build\Release\client.log` (the console window shows the same output).
 
+## How it works
+
+### 1. Injection — `injector/injector.py`
+`OpenProcess` → `VirtualAllocEx` → `WriteProcessMemory` (the DLL path) → `CreateRemoteThread(LoadLibraryW)`.
+This is the classic technique of making the game call `LoadLibraryW` on our DLL itself.
+A timestamped copy of the DLL is injected each time, so you can rebuild while it is injected.
+

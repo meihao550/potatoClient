@@ -39,3 +39,8 @@ WORKDIR C:\src
 COPY . .
 RUN cmake -S . -B build -G "Visual Studio 16 2019" -A x64 `
  && cmake --build build --config Release
+
+# Final image: only the build output
+FROM mcr.microsoft.com/windows/servercore:${WINDOWS_VERSION}
+COPY --from=build C:\src\build\Release\client.dll C:\out\client.dll
+COPY --from=build C:\src\build\Release\client.pdb C:\out\client.pdb

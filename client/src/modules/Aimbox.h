@@ -26,6 +26,7 @@ private:
     };
     std::mutex m_mutex;
     Snapshot m_snap;
+    std::vector<Actor*> m_actors;   // game thread only, reused every tick
 
     FloatSetting m_fov{ "fov", "FOV", 70.0f, 30.0f, 110.0f, "%.0f" };   // match the game's FOV setting
     FloatSetting m_range{ "range", "距離", 64.0f, 8.0f, 128.0f, "%.0f ブロック" };

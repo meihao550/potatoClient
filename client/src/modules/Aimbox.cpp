@@ -61,7 +61,8 @@ void Aimbox::onTick(Actor& player) {
     snap.pitch = me->rotation.pitch;
 
     const float range = m_range;
-    for (Actor* a : ActorList::get(player)) {
+    ActorList::get(player, m_actors);
+    for (Actor* a : m_actors) {
         if (!a || a == &player) continue;
         AABBShapeComponent* shape = a->aabbShape();
         if (!shape) continue;

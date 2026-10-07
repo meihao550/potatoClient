@@ -48,14 +48,14 @@ namespace {
     }
 }
 
-std::vector<Actor*> ActorList::get(Actor& player) {
-    std::vector<Actor*> result;
+void ActorList::get(Actor& player, std::vector<Actor*>& result) {
+    result.clear();
 
     void* level = player.at<void*>(Offsets::Actor::level);
-    if (level == nullptr) return result;
+    if (level == nullptr) return;
 
     static FreeFunction gameFree = findGameFree();   // looked up once
-    if (gameFree == nullptr) return result;
+    if (gameFree == nullptr) return;
 
     static bool firstTime = true;
     if (firstTime) logFunctionAddress(level);
@@ -74,5 +74,4 @@ std::vector<Actor*> ActorList::get(Actor& player) {
         logResult(result, player);
         firstTime = false;
     }
-    return result;
 }

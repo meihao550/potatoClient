@@ -185,3 +185,10 @@ The exe has almost no class names (RTTI) and no fixed pointer to the player, so 
 - The maximum stack size comes from ItemStack → `WeakPtr<Item>` (+0x08) → Item's `mMaxStackSize` (+0xA8)
 - **The same value is written on both server and client.** The server's copy is the real one (used for saving and placing), the client's is for display. The server doesn't resend slots it thinks are unchanged, so writing only one side makes the display go out of sync
 
+### 8. ENCHANT command — `client/src/sdk/Enchant.cpp`, `commands/EnchantCommand.cpp`
+- The string `"commands.enchant.success"` → `EnchantCommand::execute`, which uses it → `EnchantUtils::applyEnchant(ItemStackBase&, EnchantmentInstance const&, bool)`, called inside it. The start of that function is the signature
+- NBT isn't built by hand; the game's function does the work, so the rules for what can be applied are the same as `/enchant`. The same thing is done to the held item on both server and client (same reason as dupe)
+- **Remote servers**: `sdk/CommandSender.cpp`. The string `"CommandRequestPacket"` → `getName` → the vtable → the constructor that writes it and "the function that sends a chat command". Like that function, a packet is built from a payload (command string / origin = Player / version 0x34) and sent via the Level at `Actor+0x1D8` → virtual function 328 `getPacketSender` → virtual function 2 `send`. The server checks permissions, so operator permission is required
+  - The packet takes over the command string's buffer, but that buffer was allocated by the DLL's CRT. So that the game doesn't free it, we take it back after sending and then destroy the packet
+- Manual: [docs/ENCHANT.md](docs/ENCHANT.md) (Japanese only)
+

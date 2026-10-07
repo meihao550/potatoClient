@@ -15,3 +15,11 @@ layout, the threading rules and how to add modules and commands.
 - Keep the project educational. Explain *how* a technique works (in a block comment at the top
   of the file, as the existing code does), not just *that* it works.
 
+## Prerequisites
+
+- Windows 10 / 11 (x64)
+- Minecraft Bedrock **1.26.52**, GDK build (needed to test, not to build)
+- Visual Studio 2019 Build Tools with "Desktop development with C++", **or** Docker in Windows-containers mode
+- Python 3.10 or later (64-bit) for `injector/injector.py` and `tools/dump_image.py`
+- git
+

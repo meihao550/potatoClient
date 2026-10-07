@@ -47,7 +47,7 @@ private:
     std::vector<Group> m_groups;
     std::vector<std::string> m_custom;
     std::unordered_map<BlockType*, Original> m_originals;
-    bool m_letLightThrough = true;
+    BoolSetting m_letLightThrough{ "letLightThrough", "光を通す (鉱石が暗くならない)", true };
     std::string m_status;
     std::mutex m_mutex;                // guards everything above
 };

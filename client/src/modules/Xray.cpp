@@ -48,7 +48,9 @@ Xray::Xray()
           { "チェスト",         { "chest", "barrel" },                true },
           { "溶岩",             { "lava" },                           true },
           { "水",               { "water" },                          false },
-      } {}
+      } {
+    addSettings({ &m_letLightThrough });
+}
 
 Xray::Original Xray::capture(BlockType* b, const std::string& name) {
     Original o{ name, b->translucency(), b->renderLayer(), b->flags2(), b->lightBlock(), {} };
@@ -160,7 +162,7 @@ void Xray::renderSettings() {
     std::lock_guard lock(m_mutex);
     bool changed = false;
     if (!m_status.empty()) ImGui::TextWrapped("%s", m_status.c_str());
-    changed |= ImGui::Checkbox("光を通す (鉱石が暗くならない)", &m_letLightThrough);
+    changed |= m_letLightThrough.render();
 
     ImGui::SeparatorText("表示する鉱石");
     for (size_t i = 0; i < m_groups.size(); ++i) {

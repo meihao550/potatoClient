@@ -164,3 +164,13 @@ Instead of hooking functions, this **rewrites the game's data**.
   - Each `Block` (state): the cached `mIsOpaqueFullBlock`, `mLight` and occlusion shapes (`occlusionShapes`) are set to 0
 - The original values are saved once and restored exactly when Xray is turned off
 
+### 6. UP command — `client/src/commands/`, `client/src/sdk/PlayerTick.cpp`, `Actor.h`
+The exe has almost no class names (RTTI) and no fixed pointer to the player, so **code is used as the landmark**.
+- **LocalPlayer's vtable**: LocalPlayer's destructor writes its vtable with `lea rax,[vftable]` → `mov [rcx],rax`. This instruction sequence is the signature, and the vtable address comes from the `lea`'s rel32 (`Offsets::Sig`)
+- **Getting onto the game thread**: vtable slot 24 = `normalTick` is hooked with MinHook. Every tick we get `this` (the current player) and run on the game's own thread. The command bar (render thread) schedules work with `PlayerTick::run()`
+- **Move the server-side player**: even in single-player a server runs inside the same process, and the real position belongs to the server. Moving only the client's LocalPlayer gets you pulled back by the server (the first version failed this way). So `normalTick` of ServerPlayer (signature: the vtable assignment in its constructor) is hooked too, and the ServerPlayer is moved on the server thread just like `/tp`. The server then tells the client about the move
+- **Finding the highest block**: `Actor+0x1C8` → Dimension, `+0xF0` → BlockSource (the "world" of that dimension). BlockSource's virtual `getAboveTopSolidBlock(x, z, water, leaves)` returns the Y one above the highest solid block
+  - MSVC lays out overloaded virtual functions **in reverse declaration order**, so they are off by one from the header's order (`getBlock`, `getAboveTopSolidBlock`). This was confirmed by checking argument usage in the disassembly
+- **Moving**: ServerPlayer's virtual function 21 `teleportTo(pos, ...)` (the same path as `/tp`). The position is at eye height (feet + 1.62), so the current "eye height − feet" is added before passing it
+- Commands derive from `Command` and are registered in `CommandManager::init()` (the same pattern as modules)
+

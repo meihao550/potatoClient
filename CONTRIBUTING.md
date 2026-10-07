@@ -61,7 +61,8 @@ There are no automated tests. The game itself is the test environment.
 3. Exercise your change. Watch the console window and `build\Release\client.log`.
 4. Press **End** to unload, and check that the game keeps running and that your module cleans up
    after itself (for example, Xray restores the original blocks in `onDisable`).
-5. Inject again to make sure re-injection still works.
+5. Inject again to make sure re-injection still works, and that settings you changed came back
+   (they are saved to `%LOCALAPPDATA%\PotatoClient\config.json`).
 
 If the game crashes, the faulting offset in `client.dll` (Event Viewer → Windows Logs →
 Application) plus `client.pdb` tells you the source line.
@@ -111,7 +112,8 @@ pull request which version you verified against.
   - what changed and why;
   - how you tested it (game version, single-player);
   - any new offsets or signatures and how you found them.
-- Make sure the Release build succeeds before opening the pull request.
+- Make sure the Release build succeeds before opening the pull request. GitHub Actions builds
+  every push and pull request (`.github/workflows/build.yml`); the check must be green.
 
 ## License
 

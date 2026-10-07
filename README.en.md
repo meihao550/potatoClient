@@ -91,9 +91,12 @@ GitHub builds the project on every push.
 | End | Unload (the game keeps running and you can inject again) |
 
 Reading the menu:
+- **Tabs** (移動 Movement / 表示 Render / プレイヤー Player): modules grouped by kind
 - **Checkbox**: turns the module on/off
 - **「キー: X」 (Key: X) button**: click it, then press any key to rebind. Press Esc to leave it unbound
 - **「設定」 (Settings)**: expands the module's own settings
+
+Saved settings: on/off, key binds and every setting are saved to `%LOCALAPPDATA%\PotatoClient\config.json` when you close the menu and when you unload with End, and come back the next time you inject (the exact path is written to `client.log`). Delete the file to go back to the defaults.
 
 ### 5. Using Xray
 1. Open the menu with Insert and tick Xray (or press X).

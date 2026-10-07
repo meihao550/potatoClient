@@ -1,4 +1,5 @@
 #include "Backends.h"
+#include "core/InputFocus.h"
 #include "core/Logger.h"
 #include "gui/Menu.h"
 #include <imgui.h>
@@ -31,8 +32,8 @@ void Dx11Backend::render(IDXGISwapChain* swapChain) {
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
-    ImGui::GetIO().MouseDrawCursor = Menu::open;
-    if (Menu::open) ClipCursor(nullptr);
+    ImGui::GetIO().MouseDrawCursor = InputFocus::menuOpen;
+    if (InputFocus::menuOpen) ClipCursor(nullptr);
     Menu::render();
     ImGui::Render();
 

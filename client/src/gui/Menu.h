@@ -1,13 +1,11 @@
 #pragma once
-#include <atomic>
+#include "core/InputFocus.h"
 
+// Whether the menu / command bar are open lives in core/InputFocus.h.
 namespace Menu {
-    // Written on the window thread (keys) and the render thread (close button),
-    // read by the input hooks and the game thread - hence atomic.
-    inline std::atomic<bool> open = false;          // module menu (Insert)
-    inline std::atomic<bool> commandOpen = false;   // command bar (Home)
-    // While true, keyboard/mouse go to our overlay instead of the game
-    inline bool capturesInput() { return open || commandOpen; }
+    // Old names, still used by modules/ until they switch to InputFocus
+    inline std::atomic<bool>& open = InputFocus::menuOpen;
+    inline bool capturesInput() { return InputFocus::overlayHasInput(); }
 
     void loadFonts();     // call once after ImGui::CreateContext
     void render();        // call between ImGui::NewFrame / ImGui::Render

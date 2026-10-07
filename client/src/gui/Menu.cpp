@@ -1,5 +1,6 @@
 #include "Menu.h"
 #include "commands/CommandManager.h"
+#include "core/InputFocus.h"
 #include "core/Logger.h"
 #include "modules/ModuleManager.h"
 #include <Windows.h>
@@ -23,10 +24,10 @@ namespace {
         // Enter/Esc is still down, the game would see it (Esc = pause menu), so wait for the release.
         if (g_closeCommandRequested && !keyHeld(VK_RETURN) && !keyHeld(VK_ESCAPE)) {
             LOG("command bar: closed");
-            Menu::commandOpen = false;
+            InputFocus::commandBarOpen = false;
             g_closeCommandRequested = false;
         }
-        if (!Menu::commandOpen) return;
+        if (!InputFocus::commandBarOpen) return;
 
         ImGui::SetNextWindowPos(ImVec2(20, 20));
         ImGui::SetNextWindowSize(ImVec2(420, 0));
@@ -55,7 +56,7 @@ namespace {
         unsigned long long age = 0;
         const std::string message = CommandManager::lastMessage(&age);
         if (message.empty() || age > 5000) return;
-        ImGui::SetNextWindowPos(ImVec2(20, Menu::commandOpen ? 90.0f : 20.0f));
+        ImGui::SetNextWindowPos(ImVec2(20, InputFocus::commandBarOpen ? 90.0f : 20.0f));
         ImGui::SetNextWindowBgAlpha(0.6f);
         ImGui::Begin("##message", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
             ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing);
@@ -95,15 +96,15 @@ bool Menu::onKeyForBinding(int vk) {
 }
 
 void Menu::openCommandBar() {
-    if (commandOpen) return;   // Home only opens; Esc / Enter close
+    if (InputFocus::commandBarOpen) return;   // Home only opens; Esc / Enter close
     LOG("command bar: opened");
     g_closeCommandRequested = false;
     g_focusCommand = true;     // the render thread clears the text and focuses the box
-    commandOpen = true;
+    InputFocus::commandBarOpen = true;
 }
 
 void Menu::closeCommandBar(const char* reason) {
-    if (!commandOpen || g_closeCommandRequested) return;
+    if (!InputFocus::commandBarOpen || g_closeCommandRequested) return;
     LOG("command bar: close requested (%s)", reason);
     g_closeCommandRequested = true;
 }
@@ -112,7 +113,7 @@ void Menu::render() {
     ModuleManager::render();
     renderCommandBar();
     renderLastMessage();
-    if (!open) return;
+    if (!InputFocus::menuOpen) return;
     ImGui::SetNextWindowSize(ImVec2(420, 360), ImGuiCond_FirstUseEver);
     bool keepOpen = true;   // the window's close button
     ImGui::Begin("PotatoClient  (Insert: 閉じる / End: アンロード)", &keepOpen);
@@ -138,5 +139,5 @@ void Menu::render() {
         ImGui::PopID();
     }
     ImGui::End();
-    if (!keepOpen) open = false;
+    if (!keepOpen) InputFocus::menuOpen = false;
 }

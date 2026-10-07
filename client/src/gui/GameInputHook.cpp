@@ -1,7 +1,7 @@
 #include "Input.h"
-#include "Menu.h"
 #include "core/Hooks.h"
 #include "core/InFlight.h"
+#include "core/InputFocus.h"
 #include "core/Logger.h"
 #include <Unknwn.h>
 #include <cstdint>
@@ -61,7 +61,7 @@ namespace {
         InFlight::Guard guard;   // see core/InFlight.h
         const bool ok = oGetMouseState(self, state);
         if (ok && state) {
-            const bool frozen = Menu::capturesInput();
+            const bool frozen = InputFocus::overlayHasInput();
             state->positionX = g_x.apply(state->positionX, frozen);
             state->positionY = g_y.apply(state->positionY, frozen);
             state->wheelX = g_wheelX.apply(state->wheelX, frozen);
@@ -74,7 +74,7 @@ namespace {
     uint32_t STDMETHODCALLTYPE hkGetKeyState(void* self, uint32_t count, GameInputKeyState* states) {
         InFlight::Guard guard;   // see core/InFlight.h
         const uint32_t pressed = oGetKeyState(self, count, states);
-        return Menu::capturesInput() ? 0 : pressed;   // report "no keys held" so the player stops moving
+        return InputFocus::overlayHasInput() ? 0 : pressed;   // report "no keys held" so the player stops moving
     }
 
     void** readingVtable(void* gameInput, uint32_t kind) {

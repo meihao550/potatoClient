@@ -2,6 +2,7 @@
 #include "Menu.h"
 #include "core/Hooks.h"
 #include "core/InFlight.h"
+#include "core/InputFocus.h"
 #include "core/Logger.h"
 #include "modules/ModuleManager.h"
 #include <imgui.h>
@@ -23,7 +24,7 @@ namespace {
     UINT WINAPI hkGetRawInputData(HRAWINPUT raw, UINT command, LPVOID data, PUINT size, UINT headerSize) {
         InFlight::Guard guard;   // see core/InFlight.h
         const UINT result = oGetRawInputData(raw, command, data, size, headerSize);
-        if (Menu::capturesInput() && command == RID_INPUT && data && result != static_cast<UINT>(-1) && result >= sizeof(RAWINPUTHEADER)) {
+        if (InputFocus::overlayHasInput() && command == RID_INPUT && data && result != static_cast<UINT>(-1) && result >= sizeof(RAWINPUTHEADER)) {
             auto* input = static_cast<RAWINPUT*>(data);
             if (input->header.dwType == RIM_TYPEMOUSE) {
                 input->data.mouse.lLastX = 0;
@@ -48,20 +49,20 @@ namespace {
             const int vk = static_cast<int>(wp);
             if (firstPress) {
                 if (Menu::onKeyForBinding(vk)) return 0;
-                if (vk == VK_INSERT) { Menu::open = !Menu::open; return 0; }
+                if (vk == VK_INSERT) { InputFocus::menuOpen = !InputFocus::menuOpen; return 0; }
                 if (vk == VK_END) { Input::unloadRequested = true; return 0; }
                 if (vk == VK_HOME) { Menu::openCommandBar(); return 0; }
-                if (vk == VK_ESCAPE && Menu::commandOpen) { Menu::closeCommandBar("Esc"); return 0; }
-                if (!Menu::capturesInput()) ModuleManager::onKey(vk);
+                if (vk == VK_ESCAPE && InputFocus::commandBarOpen) { Menu::closeCommandBar("Esc"); return 0; }
+                if (!InputFocus::overlayHasInput()) ModuleManager::onKey(vk);
             }
         }
 
         // Key releases always go to ImGui, even with the overlay closed. Otherwise a key
         // released right after closing (the Enter of a command) stays "held" inside ImGui.
-        if (!Menu::capturesInput() && ImGui::GetCurrentContext() && (msg == WM_KEYUP || msg == WM_SYSKEYUP))
+        if (!InputFocus::overlayHasInput() && ImGui::GetCurrentContext() && (msg == WM_KEYUP || msg == WM_SYSKEYUP))
             ImGui_ImplWin32_WndProcHandler(hwnd, msg, wp, lp);
 
-        if (Menu::capturesInput() && ImGui::GetCurrentContext()) {
+        if (InputFocus::overlayHasInput() && ImGui::GetCurrentContext()) {
             ImGui_ImplWin32_WndProcHandler(hwnd, msg, wp, lp);
             // Swallow mouse/keyboard so the game doesn't react while the menu is open
             const bool isMouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;

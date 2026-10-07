@@ -36,3 +36,18 @@ set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common
 Output: `build\Release\client.dll` and `client.pdb`. New `.cpp` files under `client/src/` are
 picked up automatically.
 
+### With Docker
+
+The `Dockerfile` builds the DLL in a Windows container. It can only build: injecting into the game
+has to happen on the host.
+```
+docker build -t potatoclient-build .
+docker create --name potatoclient-out potatoclient-build
+docker cp potatoclient-out:C:\out .\out
+docker rm potatoclient-out
+```
+On Windows 10 add `--build-arg WINDOWS_VERSION=ltsc2019`, or build with `--isolation=hyperv`.
+
+> MinHook is fetched from its `master` branch (`CMakeLists.txt`), so two builds made at different
+> times may use different MinHook versions. Keep this in mind if a build suddenly breaks.
+

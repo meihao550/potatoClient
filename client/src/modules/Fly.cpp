@@ -1,7 +1,6 @@
 #include "Fly.h"
 #include "MoveInput.h"
 #include "sdk/Actor.h"
-#include <imgui.h>
 
 /*
  * Fly
@@ -25,11 +24,4 @@ void Fly::onTick(Actor& player) {
     if (MoveInput::up()) velocity.y = m_verticalSpeed;
     else if (MoveInput::down()) velocity.y = -m_verticalSpeed;
     else velocity.y = m_antiKick ? -0.04f : 0.0f;
-}
-
-void Fly::renderSettings() {
-    ImGui::SliderFloat("横の速さ", &m_speed, 0.1f, 5.0f, "%.2f ブロック/tick");
-    ImGui::SliderFloat("縦の速さ", &m_verticalSpeed, 0.1f, 3.0f, "%.2f ブロック/tick");
-    ImGui::Checkbox("アンチキック (止まっている間ゆっくり下がる)", &m_antiKick);
-    ImGui::TextDisabled("1 ブロック/tick = 20 ブロック/秒。普通のダッシュは約 0.28");
 }

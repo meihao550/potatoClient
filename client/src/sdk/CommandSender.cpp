@@ -46,7 +46,7 @@ bool CommandSender::init() {
     const uintptr_t hit = Memory::scanOrLog("CommandRequestPacket ctor", Offsets::Sig::commandRequestPacketCtor);
     if (!hit) return false;
     // Double-check: the vtable it writes must name itself "CommandRequestPacket"
-    auto** vtable = reinterpret_cast<void**>(Memory::resolveRel32(hit + 0x41, 3, 7));
+    auto** vtable = reinterpret_cast<void**>(Memory::resolveRel32(hit + Offsets::Sig::commandRequestPacketVtableLea, 3, 7));
     std::string_view name;
     reinterpret_cast<GetName_t>(vtable[Offsets::CommandRequestPacket::VIndex::getName])(nullptr, &name);
     if (name != "CommandRequestPacket") {

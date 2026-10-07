@@ -14,6 +14,10 @@ namespace Offsets {
         constexpr size_t lightBlock    = 0x166;  // Brightness (uint8, 0..15)
         constexpr size_t permutations  = 0x228;  // std::vector<std::unique_ptr<Block>> mBlockPermutations
         constexpr size_t defaultState  = 0x240;  // Block const*
+        namespace Flags2 {                       // bits of the flags2 byte
+            constexpr unsigned char ignoreForInsideCube = 1 << 3;   // mIgnoreBlockForInsideCubeRenderer
+            constexpr unsigned char isOpaqueFullBlock   = 1 << 4;   // mIsOpaqueFullBlock
+        }
     }
 
     // Block = one state/permutation of a BlockType. It caches some BlockType data
@@ -134,6 +138,12 @@ namespace Offsets {
             "55 41 57 41 56 56 57 53 48 83 EC 48 48 8D 6C 24 40 48 C7 45 00 FE FF FF FF 49 89 D7 48 89 CE "
             "48 B8 02 00 00 00 01 00 00 00 48 89 41 08 66 C7 41 10 00 00 0F 57 C0 0F 11 41 18 C7 41 28 00 00 00 00 "
             "48 8D 05 ?? ?? ?? ?? 48 89 01";
+        // Where the "lea rax, [CommandRequestPacket::vftable]" above starts (offset 3 = rel32, length 7)
+        constexpr size_t commandRequestPacketVtableLea = 0x41;
+        // Actor::getEquippedTotem (vtable 79) starts with  mov rsi, rcx / add rcx, 8 / call getHandContainer.
+        // These bytes are searched in its first getHandContainerSearchSize bytes; the E8 call is the last byte.
+        inline constexpr unsigned char getHandContainerCall[] = { 0x48, 0x89, 0xCE, 0x48, 0x83, 0xC1, 0x08, 0xE8 };
+        constexpr size_t getHandContainerSearchSize = 0x40;
         // Start of EnchantUtils::applyEnchant(ItemStackBase&, EnchantmentInstance const&, bool allowNonVanilla).
         // Found from EnchantCommand::execute (the function that uses "commands.enchant.success").
         constexpr const char* applyEnchant =

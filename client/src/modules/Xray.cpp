@@ -27,8 +27,7 @@
  */
 
 namespace {
-    constexpr uint8_t kOpaqueFullBlock = 1 << 4;
-    constexpr uint8_t kIgnoreForInsideCube = 1 << 3;
+    namespace Flags2 = Offsets::BlockType::Flags2;
     constexpr const char* kRebuildHint = "設定→ビデオの「スムーズライティング」を一度切り替えると全チャンクに反映されます";
 }
 
@@ -76,7 +75,7 @@ void Xray::restore(BlockType* b, const Original& o) {
 void Xray::hide(BlockType* b, const Original& o) const {
     // BlockType: drawn on the barrier layer, no longer a full opaque cube
     b->renderLayer() = Offsets::RenderLayer::Barrier;
-    b->flags2() = static_cast<uint8_t>((o.flags2 & ~kOpaqueFullBlock) | kIgnoreForInsideCube);
+    b->flags2() = static_cast<uint8_t>((o.flags2 & ~Flags2::isOpaqueFullBlock) | Flags2::ignoreForInsideCube);
     b->translucency() = 1.0f;
     b->lightBlock() = m_letLightThrough ? 0 : o.lightBlock;
     // Each Block permutation caches the culling data; make it match minecraft:barrier

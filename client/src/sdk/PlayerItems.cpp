@@ -23,15 +23,15 @@ namespace {
     ULONGLONG g_nextSearch = 0;   // guarded by g_searchMutex
 
     GetHandContainer_t findGetHandContainer(Actor& player) {
-        static const uint8_t pattern[] = { 0x48, 0x89, 0xCE, 0x48, 0x83, 0xC1, 0x08, 0xE8 };
+        const auto& pattern = Offsets::Sig::getHandContainerCall;
         void** vtable = *reinterpret_cast<void***>(&player);
         const auto* fn = static_cast<const uint8_t*>(vtable[Offsets::Actor::VIndex::getEquippedTotem]);
 
-        uint8_t code[0x40];
+        uint8_t code[Offsets::Sig::getHandContainerSearchSize];
         if (!Memory::safeRead(fn, code, sizeof(code))) return nullptr;
         for (size_t i = 0; i + sizeof(pattern) + 4 <= sizeof(code); i++) {
             if (memcmp(code + i, pattern, sizeof(pattern)) != 0) continue;
-            const uintptr_t call = reinterpret_cast<uintptr_t>(fn) + i + 7;   // the E8 call
+            const uintptr_t call = reinterpret_cast<uintptr_t>(fn) + i + sizeof(pattern) - 1;   // the E8 call
             const uintptr_t target = Memory::resolveRel32(call, 1, 5);
             LOG("ActorEquipment::getHandContainer at exe+%#llx", Memory::rva(target));
             return reinterpret_cast<GetHandContainer_t>(target);

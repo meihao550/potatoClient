@@ -145,3 +145,8 @@ A timestamped copy of the DLL is injected each time, so you can rebuild while it
 ### 2. DLL entry — `client/src/dllmain.cpp`
 `DllMain` runs under the loader lock, so it does nothing except start a thread that does the initialization.
 
+### 3. Render hook (ImGui overlay) — `client/src/render/`
+We create our own dummy D3D12 device and swap chain, read the addresses of
+`IDXGISwapChain::Present` (8) / `ResizeBuffers` (13) / `ID3D12CommandQueue::ExecuteCommandLists` (10) from their COM vtables,
+and hook them with MinHook. ImGui is drawn every time the game calls Present.
+

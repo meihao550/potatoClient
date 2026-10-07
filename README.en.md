@@ -51,3 +51,17 @@ This produces `out\client.dll`. On Windows 10, add `--build-arg WINDOWS_VERSION=
 
 > The in-game UI (menu, module descriptions, command messages) is in Japanese.
 
+### 4. Controls
+| Key | Action |
+|---|---|
+| Insert | Show / hide the menu (while it is open, camera, movement and clicks don't reach the game) |
+| X (rebindable in the menu) | Xray on/off |
+| F (rebindable in the menu) | Fly on/off |
+| Home | Open the command bar (type `up`, press Enter to run, Esc to close) |
+| End | Unload (the game keeps running and you can inject again) |
+
+Reading the menu:
+- **Checkbox**: turns the module on/off
+- **「キー: X」 (Key: X) button**: click it, then press any key to rebind. Press Esc to leave it unbound
+- **「設定」 (Settings)**: expands the module's own settings
+

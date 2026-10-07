@@ -97,3 +97,18 @@ Offset and signature updates are very welcome. Follow
 update the target version in both READMEs and in the header comment of `Offsets.h`, and say in the
 pull request which version you verified against.
 
+## Commits and pull requests
+
+- Use [Conventional Commits](https://www.conventionalcommits.org/) prefixes: `feat:`, `fix:`,
+  `docs:`, `refactor:`, `chore:`. Existing history uses Japanese messages. English is equally fine.
+  ```
+  feat: add an auto-sprint module
+  fix: update LocalPlayer vtable signature for 1.26.60
+  ```
+- One logical change per commit, one topic per pull request.
+- In the pull request, describe:
+  - what changed and why;
+  - how you tested it (game version, single-player);
+  - any new offsets or signatures and how you found them.
+- Make sure the Release build succeeds before opening the pull request.
+

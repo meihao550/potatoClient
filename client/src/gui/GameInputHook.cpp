@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "Menu.h"
 #include "core/Hooks.h"
+#include "core/InFlight.h"
 #include "core/Logger.h"
 #include <Unknwn.h>
 #include <cstdint>
@@ -57,6 +58,7 @@ namespace {
     Freeze g_x, g_y, g_wheelX, g_wheelY;
 
     bool STDMETHODCALLTYPE hkGetMouseState(void* self, GameInputMouseState* state) {
+        InFlight::Guard guard;   // see core/InFlight.h
         const bool ok = oGetMouseState(self, state);
         if (ok && state) {
             const bool frozen = Menu::capturesInput();
@@ -70,6 +72,7 @@ namespace {
     }
 
     uint32_t STDMETHODCALLTYPE hkGetKeyState(void* self, uint32_t count, GameInputKeyState* states) {
+        InFlight::Guard guard;   // see core/InFlight.h
         const uint32_t pressed = oGetKeyState(self, count, states);
         return Menu::capturesInput() ? 0 : pressed;   // report "no keys held" so the player stops moving
     }

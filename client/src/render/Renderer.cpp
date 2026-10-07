@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "Backends.h"
 #include "core/Hooks.h"
+#include "core/InFlight.h"
 #include "core/Logger.h"
 #include "gui/Input.h"
 #include <Windows.h>
@@ -31,6 +32,7 @@ namespace {
     ExecuteCommandLists_t oExecuteCommandLists = nullptr;
 
     void __stdcall hkExecuteCommandLists(ID3D12CommandQueue* queue, UINT count, ID3D12CommandList* const* lists) {
+        InFlight::Guard guard;   // see core/InFlight.h
         // Remember the game's DIRECT queue; ImGui must submit on the queue that owns the swapchain.
         if (!Dx12Backend::commandQueue && queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
             ID3D12CommandQueue* expected = nullptr;
@@ -68,6 +70,7 @@ namespace {
     }
 
     HRESULT __stdcall hkPresent(IDXGISwapChain* swapChain, UINT sync, UINT flags) {
+        InFlight::Guard guard;   // see core/InFlight.h
         {
             std::lock_guard lock(g_renderMutex);
             if (g_api == Api::Unknown) initApi(swapChain);
@@ -85,6 +88,7 @@ namespace {
     }
 
     HRESULT __stdcall hkResizeBuffers(IDXGISwapChain* sc, UINT count, UINT w, UINT h, DXGI_FORMAT fmt, UINT flags) {
+        InFlight::Guard guard;   // see core/InFlight.h
         {
             // The swapchain can't resize while we hold references to its back buffers
             std::lock_guard lock(g_renderMutex);

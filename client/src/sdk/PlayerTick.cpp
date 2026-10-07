@@ -1,6 +1,7 @@
 #include "PlayerTick.h"
 #include "Actor.h"
 #include "core/Hooks.h"
+#include "core/InFlight.h"
 #include "core/Logger.h"
 #include <Windows.h>
 #include <atomic>
@@ -68,12 +69,17 @@ namespace {
     Side& get(PlayerTick::Side side) { return side == PlayerTick::Side::Client ? g_client : g_server; }
 
     void hkClientTick(Actor* self) {
+        InFlight::Guard guard;   // see core/InFlight.h
         g_client.original(self);
         g_client.onTick(self);
         if (auto listener = g_clientListener.load(); listener && *reinterpret_cast<void***>(self) == g_client.vtable)
             listener(*self);
     }
-    void hkServerTick(Actor* self) { g_server.original(self); g_server.onTick(self); }
+    void hkServerTick(Actor* self) {
+        InFlight::Guard guard;   // see core/InFlight.h
+        g_server.original(self);
+        g_server.onTick(self);
+    }
 
     bool install(Side& side, NormalTick_t detour) {
         const uintptr_t hit = Memory::findSig(side.signature);

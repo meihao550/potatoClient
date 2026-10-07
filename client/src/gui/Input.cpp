@@ -1,6 +1,7 @@
 #include "Input.h"
 #include "Menu.h"
 #include "core/Hooks.h"
+#include "core/InFlight.h"
 #include "modules/ModuleManager.h"
 #include <imgui.h>
 
@@ -17,6 +18,7 @@ namespace {
     GetRawInputData_t oGetRawInputData = nullptr;
 
     UINT WINAPI hkGetRawInputData(HRAWINPUT raw, UINT command, LPVOID data, PUINT size, UINT headerSize) {
+        InFlight::Guard guard;   // see core/InFlight.h
         const UINT result = oGetRawInputData(raw, command, data, size, headerSize);
         if (Menu::capturesInput() && command == RID_INPUT && data && result != static_cast<UINT>(-1) && result >= sizeof(RAWINPUTHEADER)) {
             auto* input = static_cast<RAWINPUT*>(data);
@@ -36,6 +38,7 @@ namespace {
     }
 
     LRESULT CALLBACK hookedWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+        InFlight::Guard guard;   // see core/InFlight.h
         if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) {
             const bool firstPress = !(lp & (1 << 30));   // ignore auto-repeat
             const int vk = static_cast<int>(wp);

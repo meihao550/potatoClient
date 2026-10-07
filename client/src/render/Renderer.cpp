@@ -152,8 +152,10 @@ bool Renderer::init() {
 
 void Renderer::shutdown() {
     std::lock_guard lock(g_renderMutex);
-    if (g_api == Api::Dx12) Dx12Backend::shutdown();
-    if (g_api == Api::Dx11) Dx11Backend::shutdown();
+    // Both, whatever g_api says: a backend whose init failed (Api::Failed) still holds what it
+    // created before failing. Each one only releases what it actually set up.
+    Dx12Backend::shutdown();
+    Dx11Backend::shutdown();
     if (ID3D12CommandQueue* queue = Dx12Backend::commandQueue.exchange(nullptr)) queue->Release();
     g_api = Api::Unknown;
 }

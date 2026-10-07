@@ -1,0 +1,5 @@
+.git
+build/
+dump/
+out/
+**/__pycache__/

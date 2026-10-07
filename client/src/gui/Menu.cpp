@@ -113,7 +113,7 @@ void Menu::render() {
     renderLastMessage();
     if (!open) return;
     ImGui::SetNextWindowSize(ImVec2(420, 360), ImGuiCond_FirstUseEver);
-    ImGui::Begin("LearnClient  (Insert: 閉じる / End: アンロード)", &open);
+    ImGui::Begin("PotatoClient  (Insert: 閉じる / End: アンロード)", &open);
 
     for (auto& m : ModuleManager::modules()) {
         ImGui::PushID(m.get());

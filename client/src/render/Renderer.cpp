@@ -93,7 +93,7 @@ namespace {
 
     bool getVtables(void** present, void** resize, void** execute) {
         WNDCLASSEXW wc{ sizeof(wc), CS_HREDRAW | CS_VREDRAW, DefWindowProcW, 0, 0, GetModuleHandleW(nullptr),
-                        nullptr, nullptr, nullptr, nullptr, L"LearnClientDummy", nullptr };
+                        nullptr, nullptr, nullptr, nullptr, L"PotatoClientDummy", nullptr };
         RegisterClassExW(&wc);
         HWND hwnd = CreateWindowW(wc.lpszClassName, L"", WS_OVERLAPPEDWINDOW, 0, 0, 100, 100, nullptr, nullptr, wc.hInstance, nullptr);
 

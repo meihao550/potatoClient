@@ -22,9 +22,6 @@ There is no game API and no mod loader. Everything the DLL knows about the game 
 offsets, virtual function slots, byte signatures) was found by reverse engineering and lives in
 one file, `client/src/sdk/Offsets.h`.
 
-> The CMake project and the menu title are still called `LearnClient`, the project's working
-> name. It is the same thing.
-
 ## 2. Repository map
 
 ```

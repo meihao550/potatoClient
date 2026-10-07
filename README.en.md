@@ -142,3 +142,6 @@ Log: `build\Release\client.log` (the console window shows the same output).
 This is the classic technique of making the game call `LoadLibraryW` on our DLL itself.
 A timestamped copy of the DLL is injected each time, so you can rebuild while it is injected.
 
+### 2. DLL entry — `client/src/dllmain.cpp`
+`DllMain` runs under the loader lock, so it does nothing except start a thread that does the initialization.
+

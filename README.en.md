@@ -16,44 +16,68 @@ New to the code? Start with **[docs/READING_THE_CODE.md](docs/READING_THE_CODE.m
 ## How to use
 
 ### 1. Requirements
+Needed whichever way you build:
 - Windows 10 / 11 (x64)
 - Minecraft Bedrock **1.26.52** (the GDK build, installed from the Microsoft Store or the Xbox app)
-- Visual Studio 2019 or later (2022 / 2026, Community or Build Tools) with the "Desktop development with C++" workload (it includes CMake)
-- Python 3.10 or later (64-bit)
-- git (the build downloads MinHook and Dear ImGui automatically)
+
+There are three ways to get the client. **Pick the one that fits your setup.** All of them produce the same `client.dll` and `injector.exe`.
+
+| Way | What else you need | Good for |
+|---|---|---|
+| **A. Visual Studio** (recommended) | Visual Studio 2019 / 2022 / 2026 (Community or Build Tools) with "Desktop development with C++" | Reading or changing the code |
+| **B. Docker** | Docker Desktop in Windows-containers mode | Not installing Visual Studio |
+| **C. No build** | A GitHub account | Just trying it out |
+
+Python is not required. (Install Python 3.10+ 64-bit only if you want the older `injector\injector.py`.)
 
 ### 2. Build
-1. Open **"Developer PowerShell for VS"** (or "Developer Command Prompt for VS") from the Start menu. It puts Visual Studio's CMake and compiler on the PATH.
-2. Go to the project folder (the one that contains `CMakeLists.txt`) and run:
-```
-cmake -S . -B build -A x64
-cmake --build build --config Release
-```
-The build succeeded if `build\Release\client.dll` exists (`client.pdb` is for crash analysis).
-After the first build, only the `--build` line needs to be run again when you change the source.
-- CMake picks the newest installed Visual Studio automatically
-- "`cmake` is not recognized": you are in a plain PowerShell / Command Prompt. Use the Developer PowerShell
-- "generator does not match": a `build` folder made with another Visual Studio version is still there. Delete `build` and run both commands again
 
-#### Building with Docker (optional)
-If you only want the DLL and don't want to install Visual Studio, you can use the bundled `Dockerfile`. Docker must be in **Windows containers** mode. The container only builds the DLL: injecting it into the game cannot be done from a container.
+#### A. Build with Visual Studio
+1. If you don't have Visual Studio yet, install **Community** or **Build Tools** from [visualstudio.microsoft.com](https://visualstudio.microsoft.com/downloads/). In the installer, tick **"Desktop development with C++"** (it includes CMake).
+2. Open **"Developer PowerShell for VS"** (or "Developer Command Prompt for VS") from the Start menu. A plain PowerShell can't find `cmake`.
+3. Go to the repository folder (the one that contains `CMakeLists.txt`) and run these two lines:
+   ```
+   cmake -S . -B build -A x64
+   cmake --build build --config Release
+   ```
+4. It worked if `client.dll` and `injector.exe` are in `build\Release\` (`client.pdb` is for crash analysis).
+
+- After the first build, only the second line (`--build`) needs to be run again when you change the source
+- The newest installed Visual Studio is used automatically. If you switch Visual Studio versions, delete the `build` folder and start again from the first line
+
+#### B. Build with Docker
+Switch Docker Desktop to **Windows containers**, then run this in the repository folder. (The container only builds; injecting into the game can't be done from a container.)
 ```
 docker build -t potatoclient-build .
 docker create --name potatoclient-out potatoclient-build
 docker cp potatoclient-out:C:\out .\out
 docker rm potatoclient-out
 ```
-This produces `out\client.dll`. On Windows 10, add `--build-arg WINDOWS_VERSION=ltsc2019` or build with `--isolation=hyperv`.
+`client.dll` and `injector.exe` end up in `out\`. On Windows 10, add `--build-arg WINDOWS_VERSION=ltsc2019` or build with `--isolation=hyperv`.
+
+#### C. Use it without building
+GitHub builds the project on every push.
+1. Open the [Actions page](https://github.com/meihao550/potatoClient/actions/workflows/build.yml) and pick the newest run with a green check (✓)
+2. Download `potatoclient` under **Artifacts** and extract it (you need to be signed in to GitHub)
+3. It contains `client.dll` and `injector.exe`
+
+#### If the build fails
+| Symptom | Fix |
+|---|---|
+| `cmake` is not recognized | You are in a plain PowerShell. Use "Developer PowerShell for VS" |
+| No "Developer PowerShell for VS" in the Start menu | Open the Visual Studio Installer, click "Modify" and add "Desktop development with C++" |
+| `generator does not match` / `Visual Studio 16 2019 could not find` | A `build` folder made with other settings is still there. Delete `build` and start again from the first line |
+| `git` not found (FetchContent fails during the build) | Run from the Developer PowerShell, or install [Git for Windows](https://git-scm.com/download/win) |
 
 ### 3. Inject
 1. Start Minecraft and **enter a single-player world** (Xray's block list is only created once you are in a world).
-2. In another window, run:
+2. Double-click `build\Release\injector.exe` (or run it from a terminal):
    ```
-   python injector\injector.py
+   build\Release\injector.exe
    ```
-3. Click the **Inject** button in the window that opens.
-   - The DLL path defaults to `build\Release\client.dll`. Use the browse button (「参照...」) to pick a different DLL.
-4. It worked if the injector shows 「Inject 成功!」 ("Inject succeeded!") and a console window opens next to the game printing `Injected!`.
+   - It injects the `client.dll` in the same folder. For another DLL: `injector.exe <path to dll>`
+   - If you have Python, the older button-based `python injector\injector.py` works too
+3. It worked if the injector prints 「Inject 成功!」 ("Inject succeeded!") and a console window opens next to the game printing `Injected!`.
 
 > The in-game UI (menu, module descriptions, command messages) is in Japanese.
 
@@ -143,9 +167,9 @@ Log: `build\Release\client.log` (the console window shows the same output).
 
 ## How it works
 
-### 1. Injection — `injector/injector.py`
+### 1. Injection — `injector/injector.cpp` (Python version: `injector/injector.py`)
 `OpenProcess` → `VirtualAllocEx` → `WriteProcessMemory` (the DLL path) → `CreateRemoteThread(LoadLibraryW)`.
-This is the classic technique of making the game call `LoadLibraryW` on our DLL itself.
+This is the classic technique of making the game call `LoadLibraryW` on our DLL itself. The C++ and Python versions follow the same steps.
 A timestamped copy of the DLL is injected each time, so you can rebuild while it is injected.
 
 ### 2. DLL entry — `client/src/dllmain.cpp`
@@ -206,7 +230,7 @@ The exe has almost no class names (RTTI) and no fixed pointer to the player, so 
 ## When the game updates (reverse-engineering procedure)
 All offsets live in `client/src/sdk/Offsets.h`.
 1. Start the game and enter a world
-2. `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` — restores the encrypted exe from memory into a form Ghidra/IDA can open
+2. `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` — restores the encrypted exe from memory into a form Ghidra/IDA can open (this step alone needs Python 3.10+)
 3. Check the struct layouts in [LeviLamina](https://github.com/LiteLDev/LeviLamina)'s `src/mc/world/level/block/BlockType.h` and `Block.h` (they are for BDS, but almost identical to the client)
 4. Read live memory to confirm that known values (names, etc.) are at those offsets, then update `Offsets.h`
 5. For the UP command: check in the disassembly that the `LocalPlayer` / `ServerPlayer` vtable signatures still match exactly one location and that the vtable indices (`VIndex`) are still right
@@ -214,7 +238,8 @@ All offsets live in `client/src/sdk/Offsets.h`.
 
 ## Layout
 ```
-injector/injector.py          one-button Inject
+injector/injector.cpp         Inject (built as build\Release\injector.exe)
+injector/injector.py          the same in Python (one-button GUI)
 tools/dump_image.py           dumps the exe from the running game
 client/src/
   dllmain.cpp                 init thread / unload

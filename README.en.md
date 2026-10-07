@@ -110,3 +110,9 @@ In single-player, the built-in server's ServerPlayer is moved through the same p
 - **Also works on multiplayer servers (operator permission required)**: it sends `/enchant @s <name> <level>` to the server the same way chat does. Only enchantments that can be applied to the held item are sent, so `enchant all` doesn't flood you with errors. Levels go up to the maximum the server's `/enchant` allows
 - Full manual: **[docs/ENCHANT.md](docs/ENCHANT.md)** (Japanese only)
 
+### 6.6 Inventory
+| Module | Action |
+|---|---|
+| Inventory | Shows the 36 inventory slots and the off hand in the top-right corner. The selected hotbar slot is yellow. While the menu is open you can move the window, and hovering a slot shows the item name and count (multiplayer OK) |
+| AutoTotem | When the off hand has no Totem of Undying and the inventory has one, moves it to the off hand automatically. Whatever was in the off hand is moved to an empty slot (can be turned off in Settings). **Single-player only** |
+

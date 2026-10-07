@@ -41,7 +41,6 @@ void ModuleManager::onKey(int vk) {
         if (m->key() == vk) m->toggle();
 }
 
-// レンダーの定義
 void ModuleManager::render() {
     for (auto& m : g_modules)
         if (m->isEnabled()) m->onRender();

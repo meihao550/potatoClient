@@ -12,5 +12,4 @@ namespace CommandManager {
     void print(const std::string& message);
     // Latest message and how many milliseconds ago it was printed (empty if none)
     std::string lastMessage(unsigned long long* ageMs);
-    std::vector<std::unique_ptr<Command>>& commands();
 }

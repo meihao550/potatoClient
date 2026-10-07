@@ -11,11 +11,11 @@ namespace Memory {
     // Returns 0 when not found.
     uintptr_t findSig(std::string_view pattern);
 
-    // Resolve a rel32 operand (e.g. E8/E9 call/jmp, or lea/mov rip-relative)
-    // `offset` = where the 4-byte displacement starts, `size` = full instruction length.
     // memcpy that returns false instead of crashing on an invalid address (SEH)
     bool safeRead(const void* src, void* dst, size_t size);
 
+    // Resolve a rel32 operand (e.g. E8/E9 call/jmp, or lea/mov rip-relative)
+    // `offset` = where the 4-byte displacement starts, `size` = full instruction length.
     uintptr_t resolveRel32(uintptr_t instr, int offset, int size);
 
     // Call virtual function number `index` of a game object (x64: `this` goes in rcx like any first argument).

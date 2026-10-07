@@ -1,5 +1,6 @@
 #pragma once
 #include "Module.h"
+#include "sdk/Offsets.h"
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -25,7 +26,7 @@ private:
     struct OriginalState {             // cached copy inside each Block permutation
         Block* block;
         uint8_t isOpaqueFullBlock, light;
-        uint16_t occlusionShapes[7];
+        uint16_t occlusionShapes[Offsets::Block::occlusionShapeCount];
     };
     struct Original {                  // a block's real values, captured before we ever touch it
         std::string name;

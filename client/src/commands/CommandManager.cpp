@@ -32,8 +32,6 @@ namespace {
     };
 }
 
-std::vector<std::unique_ptr<Command>>& CommandManager::commands() { return g_commands; }
-
 void CommandManager::init() {
     g_commands.push_back(std::make_unique<UpCommand>());
     g_commands.push_back(std::make_unique<VClipCommand>());

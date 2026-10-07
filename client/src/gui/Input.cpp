@@ -2,14 +2,17 @@
 #include "Menu.h"
 #include "core/Hooks.h"
 #include "core/InFlight.h"
+#include "core/Logger.h"
 #include "modules/ModuleManager.h"
 #include <imgui.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
 namespace {
-    HWND g_hwnd = nullptr;
-    WNDPROC g_original = nullptr;
+    std::atomic<HWND> g_hwnd = nullptr;
+    std::atomic<WNDPROC> g_original = nullptr;
+    // Set when we unload but could not leave the WndProc chain: only forward messages from then on
+    std::atomic<bool> g_passThrough = false;
 
     // The game reads mouse movement for the camera through raw input
     // (WM_INPUT -> GetRawInputData). While the menu is open we hand it
@@ -39,6 +42,7 @@ namespace {
 
     LRESULT CALLBACK hookedWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         InFlight::Guard guard;   // see core/InFlight.h
+        if (g_passThrough) return CallWindowProcW(g_original, hwnd, msg, wp, lp);
         if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) {
             const bool firstPress = !(lp & (1 << 30));   // ignore auto-repeat
             const int vk = static_cast<int>(wp);
@@ -78,12 +82,23 @@ bool Input::init() {
 void Input::install(HWND hwnd) {
     if (g_hwnd) return;
     g_hwnd = hwnd;
-    g_original = reinterpret_cast<WNDPROC>(
-        SetWindowLongPtrW(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(hookedWndProc)));
+    // Store the original before switching: a message can arrive the moment we are installed
+    g_original = reinterpret_cast<WNDPROC>(GetWindowLongPtrW(hwnd, GWLP_WNDPROC));
+    SetWindowLongPtrW(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(hookedWndProc));
 }
 
-void Input::uninstall() {
-    if (g_hwnd && g_original)
-        SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_original));
-    g_hwnd = nullptr;
+bool Input::uninstall() {
+    const HWND hwnd = g_hwnd.exchange(nullptr);
+    if (!hwnd || !g_original) return true;
+    // Only undo our subclass while we are still the outermost WndProc. If another overlay
+    // (Discord, Steam, ...) subclassed after us, it keeps calling into us: restoring would
+    // cut it off, and freeing the DLL would make it call freed memory.
+    const auto current = reinterpret_cast<WNDPROC>(GetWindowLongPtrW(hwnd, GWLP_WNDPROC));
+    if (current == hookedWndProc) {
+        SetWindowLongPtrW(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(g_original.load()));
+        return true;
+    }
+    LOG("warning: another program subclassed the game window after us; staying in its WndProc chain");
+    g_passThrough = true;
+    return false;
 }

@@ -116,3 +116,8 @@ In single-player, the built-in server's ServerPlayer is moved through the same p
 | Inventory | Shows the 36 inventory slots and the off hand in the top-right corner. The selected hotbar slot is yellow. While the menu is open you can move the window, and hovering a slot shows the item name and count (multiplayer OK) |
 | AutoTotem | When the off hand has no Totem of Undying and the inventory has one, moves it to the off hand automatically. Whatever was in the off hand is moved to an empty slot (can be turned off in Settings). **Single-player only** |
 
+### 7. Unloading and rebuilding
+- Press **End** in game to unload. The console window closes (Xray is restored automatically if it was on)
+- The injector loads a copy of the DLL (`client_loaded_<timestamp>.dll`), so **you can rebuild while it is injected**. Old copies are deleted automatically on the next inject
+- To try a new build: unload with End, then inject again
+

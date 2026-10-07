@@ -30,17 +30,17 @@ namespace {
 
     // Runs on the thread of whichever side owns our position (see PlayerTick::runOnSelf)
     void teleportUp(Actor& player, bool server) {
-        StateVectorComponent* state = player.stateVector();
-        AABBShapeComponent* shape = player.aabbShape();
+        const auto refs = player.refs();
         BlockSource* region = player.blockSource();
-        if (!state || !shape || !region) {
+        if (!refs || !region) {
             CommandManager::print("プレイヤーの情報が取れません (Offsets.h を確認)");
             return;
         }
 
-        const float feetY = shape->aabb.min.y;
-        const int x = static_cast<int>(std::floor(state->pos.x));
-        const int z = static_cast<int>(std::floor(state->pos.z));
+        const Vec3 feet = refs->feet();
+        const float feetY = feet.y;
+        const int x = static_cast<int>(std::floor(feet.x));
+        const int z = static_cast<int>(std::floor(feet.z));
         const short top = region->getAboveTopSolidBlock(x, z, true, true);   // water and leaves count as ground
 
         if (top <= region->getMinHeight()) {
@@ -52,7 +52,7 @@ namespace {
             return;
         }
 
-        const Vec3 to{ state->pos.x, static_cast<float>(top), state->pos.z };
+        const Vec3 to{ feet.x, static_cast<float>(top), feet.z };
         player.moveFeetTo(to, server);
         reportIfPulledBack(player, server, to);
 

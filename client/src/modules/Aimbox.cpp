@@ -51,22 +51,21 @@ namespace {
 }
 
 void Aimbox::onTick(Actor& player) {
-    StateVectorComponent* me = player.stateVector();
-    ActorRotationComponent* rot = player.rotation();
-    if (!me || !rot) return;
+    const auto me = player.refs();
+    if (!me) return;
 
     Snapshot snap;
     snap.time = GetTickCount64();
-    snap.eye = me->pos;
-    snap.yaw = rot->yaw;
-    snap.pitch = rot->pitch;
+    snap.eye = me->state.pos;
+    snap.yaw = me->rotation.yaw;
+    snap.pitch = me->rotation.pitch;
 
     for (Actor* a : ActorList::get(player)) {
         if (!a || a == &player) continue;
         AABBShapeComponent* shape = a->aabbShape();
         if (!shape) continue;
         if (m_skipSmall && shape->width < 0.3f) continue;
-        const Vec3 d = sub(shape->aabb.min, me->pos);
+        const Vec3 d = sub(shape->aabb.min, me->state.pos);
         if (dot(d, d) > m_range * m_range) continue;
         snap.boxes.push_back(shape->aabb);
     }

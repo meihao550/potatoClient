@@ -42,21 +42,17 @@ namespace {
         return false;
     }
 
-    Vec3 feetOf(Actor& player) {
-        const StateVectorComponent* state = player.stateVector();
-        return { state->pos.x, player.aabbShape()->aabb.min.y, state->pos.z };
-    }
-
     void report(const Vec3& to) {
         char text[96];
         snprintf(text, sizeof(text), "%.1f %.1f %.1f へ移動しました", to.x, to.y, to.z);
         CommandManager::print(text);
     }
 
-    bool ready(Actor& player) {
-        if (player.stateVector() && player.aabbShape() && player.rotation()) return true;
-        CommandManager::print("プレイヤーの情報が取れません (Offsets.h を確認)");
-        return false;
+    // The player's components, or nothing (and a message) when they can't be read
+    std::optional<ActorRefs> playerRefs(Actor& player) {
+        auto refs = player.refs();
+        if (!refs) CommandManager::print("プレイヤーの情報が取れません (Offsets.h を確認)");
+        return refs;
     }
 }
 
@@ -65,8 +61,9 @@ void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
     const ULONGLONG checkAt = GetTickCount64() + 1000;
     PlayerTick::run(PlayerTick::Side::Client, [checkAt, feet](Actor& p) {
         if (GetTickCount64() < checkAt) return false;   // not yet: ask again next tick
-        if (!p.stateVector() || !p.aabbShape()) return true;
-        const Vec3 now = feetOf(p);
+        const auto refs = p.refs();
+        if (!refs) return true;
+        const Vec3 now = refs->feet();
         const float dx = now.x - feet.x, dy = now.y - feet.y, dz = now.z - feet.z;
         // falling after a vclip is fine; being moved sideways or back up/down a lot is not
         if (dx * dx + dz * dz > 1.0f || dy > 1.0f || dy < -30.0f)
@@ -81,8 +78,9 @@ void VClipCommand::execute(const std::vector<std::string>& args) {
     if (!inWorld()) return;
 
     PlayerTick::runOnSelf([dy = *blocks](Actor& player, bool server) {
-        if (!ready(player)) return;
-        Vec3 to = feetOf(player);
+        const auto refs = playerRefs(player);
+        if (!refs) return;
+        Vec3 to = refs->feet();
         to.y += dy;
         player.moveFeetTo(to, server);
         report(to);
@@ -96,9 +94,10 @@ void HClipCommand::execute(const std::vector<std::string>& args) {
     if (!inWorld()) return;
 
     PlayerTick::runOnSelf([distance = *blocks](Actor& player, bool server) {
-        if (!ready(player)) return;
-        const float yaw = player.rotation()->yaw * Util::kDegToRad;
-        Vec3 to = feetOf(player);
+        const auto refs = playerRefs(player);
+        if (!refs) return;
+        const float yaw = refs->rotation.yaw * Util::kDegToRad;
+        Vec3 to = refs->feet();
         to.x += -std::sin(yaw) * distance;   // yaw 0 = +Z, yaw -90 = +X
         to.z += std::cos(yaw) * distance;
         player.moveFeetTo(to, server);
@@ -112,8 +111,9 @@ void TpCommand::execute(const std::vector<std::string>& args) {
     if (!inWorld()) return;
 
     PlayerTick::runOnSelf([args](Actor& player, bool server) {
-        if (!ready(player)) return;
-        const Vec3 from = feetOf(player);
+        const auto refs = playerRefs(player);
+        if (!refs) return;
+        const Vec3 from = refs->feet();
         const auto x = parseCoordinate(args[1], from.x);
         const auto y = parseCoordinate(args[2], from.y);
         const auto z = parseCoordinate(args[3], from.z);

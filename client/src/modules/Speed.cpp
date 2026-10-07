@@ -6,14 +6,13 @@
 // Same trick as Fly (overwrite posDelta after the tick), but only x/z:
 // gravity, jumping and falling stay as the game computes them.
 void Speed::onTick(Actor& player) {
-    StateVectorComponent* state = player.stateVector();
-    ActorRotationComponent* rotation = player.rotation();
-    if (!state || !rotation) return;
+    const auto refs = player.refs();
+    if (!refs) return;
 
     float x = 0, z = 0;
-    if (!MoveInput::direction(rotation->yaw, x, z)) return;   // no keys: let the game slow us down
-    state->posDelta.x = x * m_speed;
-    state->posDelta.z = z * m_speed;
+    if (!MoveInput::direction(refs->rotation.yaw, x, z)) return;   // no keys: let the game slow us down
+    refs->state.posDelta.x = x * m_speed;
+    refs->state.posDelta.z = z * m_speed;
 }
 
 void Speed::renderSettings() {

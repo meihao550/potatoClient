@@ -110,16 +110,17 @@ public:
     // client = our LocalPlayer on a remote server: the client reports its own position
     //          to the server every tick, so we just write the new position ourselves.
     void moveFeetTo(const Vec3& feet, bool server) {
-        StateVectorComponent* state = stateVector();
-        AABBShapeComponent* shape = aabbShape();
-        if (!state || !shape) return;
-        const Vec3 eye{ feet.x, feet.y + (state->pos.y - shape->aabb.min.y), feet.z };
+        const auto r = refs();
+        if (!r) return;
+        StateVectorComponent& state = r->state;
+        AABB& box = r->shape.aabb;
+        const Vec3 eye{ feet.x, feet.y + (state.pos.y - box.min.y), feet.z };
         if (server) { teleportTo(eye); return; }
 
-        const Vec3 d{ eye.x - state->pos.x, eye.y - state->pos.y, eye.z - state->pos.z };
-        state->pos = eye;
-        state->posPrev = eye;          // no interpolation from the old spot
-        state->posDelta = { 0, 0, 0 };
-        for (Vec3* v : { &shape->aabb.min, &shape->aabb.max }) { v->x += d.x; v->y += d.y; v->z += d.z; }
+        const Vec3 d{ eye.x - state.pos.x, eye.y - state.pos.y, eye.z - state.pos.z };
+        state.pos = eye;
+        state.posPrev = eye;           // no interpolation from the old spot
+        state.posDelta = { 0, 0, 0 };
+        for (Vec3* v : { &box.min, &box.max }) { v->x += d.x; v->y += d.y; v->z += d.z; }
     }
 };

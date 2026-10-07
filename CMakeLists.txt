@@ -37,7 +37,7 @@ file(GLOB_RECURSE CLIENT_SOURCES CONFIGURE_DEPENDS client/src/*.cpp)
 add_library(client SHARED ${CLIENT_SOURCES})
 target_include_directories(client PRIVATE client/src)
 target_compile_definitions(client PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-target_compile_options(client PRIVATE /utf-8 /W3 /Zi)
+target_compile_options(client PRIVATE /utf-8 /W4 /Zi)
 # PDB for Release too, so crash offsets in the Windows event log can be mapped to source lines
 target_link_options(client PRIVATE /DEBUG /OPT:REF /OPT:ICF)
 target_link_libraries(client PRIVATE minhook imgui nlohmann_json::nlohmann_json d3d11 d3d12 dxgi shell32 ole32)
@@ -45,5 +45,5 @@ target_link_libraries(client PRIVATE minhook imgui nlohmann_json::nlohmann_json 
 # Injector: ends up next to client.dll (build\Release\injector.exe), no Python needed
 add_executable(injector injector/injector.cpp)
 target_compile_definitions(injector PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-target_compile_options(injector PRIVATE /utf-8 /W3)
+target_compile_options(injector PRIVATE /utf-8 /W4)
 target_link_libraries(injector PRIVATE advapi32)

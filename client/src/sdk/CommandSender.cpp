@@ -22,6 +22,9 @@
  */
 
 namespace {
+    // The padding alignas(8) adds is the point: it reproduces the game's layout (checked below)
+#pragma warning(push)
+#pragma warning(disable : 4324)   // structure was padded due to alignment specifier
     // Layout read from the constructor (offsets into the payload it moves from)
     struct CommandRequestPayload {
         std::string command;          // 0x00
@@ -32,6 +35,7 @@ namespace {
         int32_t version = Offsets::CommandRequestPacket::commandVersion;   // 0x60
         bool internalSource = false;  // 0x64
     };
+#pragma warning(pop)
     static_assert(sizeof(std::string) == 0x20, "MSVC std::string layout");
     static_assert(offsetof(CommandRequestPayload, uuid) == 0x28 && offsetof(CommandRequestPayload, requestId) == 0x38 && offsetof(CommandRequestPayload, playerId) == 0x58 &&
                   offsetof(CommandRequestPayload, version) == 0x60 && offsetof(CommandRequestPayload, internalSource) == 0x64,

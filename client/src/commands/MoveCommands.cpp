@@ -37,7 +37,7 @@ namespace {
     }
 }
 
-void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
+void reportIfPulledBack(Actor& /*player*/, bool server, const Vec3& feet) {
     if (server) return;
     const ULONGLONG checkAt = GetTickCount64() + 1000;
     PlayerTick::run(PlayerTick::Side::Client, [checkAt, feet](Actor& p) {

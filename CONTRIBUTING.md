@@ -56,7 +56,7 @@ On Windows 10 add `--build-arg WINDOWS_VERSION=ltsc2019`, or build with `--isola
 
 There are no automated tests. The game itself is the test environment.
 
-1. Build in Release with no new warnings (the project compiles with `/W3`).
+1. Build in Release with no warnings (the project compiles with `/W4` and currently has none).
 2. Start the game, enter a **single-player** world, and run `build\Release\injector.exe`.
 3. Exercise your change. Watch the console window and `build\Release\client.log`.
 4. Press **End** to unload, and check that the game keeps running and that your module cleans up

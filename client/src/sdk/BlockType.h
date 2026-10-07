@@ -1,4 +1,5 @@
 #pragma once
+#include "GameObject.h"
 #include "Offsets.h"
 #include <cstdint>
 #include <string>
@@ -12,19 +13,15 @@ struct MsvcString {   // layout of std::string in MSVC
     const char* c_str() const { return capacity > 15 ? ptr : buf; }
 };
 
-class Block {
+class Block : public GameObject {
 public:
-    template <class T> T& at(size_t off) { return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(this) + off); }
-
     uint8_t& isOpaqueFullBlock() { return at<uint8_t>(Offsets::Block::isOpaqueFullBlock); }
     uint8_t& light()             { return at<uint8_t>(Offsets::Block::light); }
     uint16_t* occlusionShapes()  { return &at<uint16_t>(Offsets::Block::occlusionShapes); }
 };
 
-class BlockType {
+class BlockType : public GameObject {
 public:
-    template <class T> T& at(size_t off) { return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(this) + off); }
-
     std::string name()       { return at<MsvcString>(Offsets::BlockType::fullName).c_str(); }
     float& translucency()    { return at<float>(Offsets::BlockType::translucency); }
     uint8_t& renderLayer()   { return at<uint8_t>(Offsets::BlockType::renderLayer); }

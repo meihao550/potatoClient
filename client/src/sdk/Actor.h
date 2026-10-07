@@ -25,10 +25,8 @@ public:
     }
 };
 
-class ItemStack {
+class ItemStack : public GameObject {
 public:
-    template <class T> T& at(size_t off) { return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(this) + off); }
-
     // nullptr for an empty slot
     uint8_t* item() {
         auto* counter = at<uint8_t**>(Offsets::ItemStack::item);
@@ -59,10 +57,8 @@ public:
     }
 };
 
-class Actor {
+class Actor : public GameObject {
 public:
-    template <class T> T& at(size_t off) { return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(this) + off); }
-
     StateVectorComponent* stateVector() { return at<StateVectorComponent*>(Offsets::Actor::stateVector); }
     AABBShapeComponent* aabbShape()     { return at<AABBShapeComponent*>(Offsets::Actor::aabbShape); }
     ActorRotationComponent* rotation()  { return at<ActorRotationComponent*>(Offsets::Actor::rotation); }

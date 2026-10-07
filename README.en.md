@@ -1,5 +1,8 @@
 # PotatoClient — a Minecraft Bedrock client
 
+[![build](https://github.com/meihao550/potatoClient/actions/workflows/build.yml/badge.svg)](https://github.com/meihao550/potatoClient/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 [日本語](README.md) | English
 
 A Horion-style internal (DLL) client built from scratch to learn how cheat clients work.

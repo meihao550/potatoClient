@@ -1,5 +1,8 @@
 # PotatoClient — Minecraft Bedrock クライアント
 
+[![build](https://github.com/meihao550/potatoClient/actions/workflows/build.yml/badge.svg)](https://github.com/meihao550/potatoClient/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 日本語 | [English](README.en.md)
 
 Horion 風の内部 (DLL) クライアントを一から作って、チートクライアントの仕組みを学ぶためのプロジェクトです。

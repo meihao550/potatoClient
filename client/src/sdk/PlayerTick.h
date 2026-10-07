@@ -21,6 +21,11 @@ namespace PlayerTick {
     // LocalPlayer is (other ServerPlayers are LAN guests). Single-player worlds only.
     void runOnOwnServerPlayer(std::function<void(Actor& server)> fn);
 
+    // Single-player: make a change on our ServerPlayer (the real inventory), then the same change
+    // on our LocalPlayer (the copy the hotbar shows - the server doesn't resend slots it didn't
+    // change itself). serverFn returns false when it changed nothing; clientFn is then skipped.
+    void runOnServerThenClient(std::function<bool(Actor& server)> serverFn, std::function<void(Actor& local)> clientFn);
+
     // Runs fn with whichever player owns our real position: our ServerPlayer when the
     // world runs on this PC (server = true), otherwise our LocalPlayer (remote server).
     void runOnSelf(std::function<void(Actor& player, bool server)> fn);

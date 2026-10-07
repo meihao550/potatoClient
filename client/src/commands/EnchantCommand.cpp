@@ -7,6 +7,7 @@
 #include "sdk/Enchant.h"
 #include "sdk/PlayerTick.h"
 #include <cstdio>
+#include <memory>
 #include <utility>
 
 /*
@@ -46,25 +47,18 @@ namespace {
         CommandManager::print(text);
     }
 
-    // Server thread: enchant our ServerPlayer's held item, then mirror it on the client
-    void enchantHeld(Actor& server, const Wanted& wanted) {
-        ItemStack* stack = Require::heldItem(server, kHoldSomething);
-        if (!stack) return;
-
+    // Server thread: enchant our ServerPlayer's held item. Returns what was applied (empty = nothing).
+    Wanted enchantHeld(Actor& server, const Wanted& wanted) {
         Wanted applied;
+        ItemStack* stack = Require::heldItem(server, kHoldSomething);
+        if (!stack) return applied;
+
         for (const auto& [id, level] : wanted)
             if (Enchant::apply(*stack, id, level)) applied.push_back({ id, level });
         if (applied.empty()) {
             CommandManager::print("このアイテムには付けられません (種類が合わない・他のエンチャントと両立しない)");
-            return;
+            return applied;
         }
-
-        PlayerTick::run(PlayerTick::Side::Client, [applied](Actor& local) {
-            ItemStack* copy = local.getCarriedItem();
-            if (copy && copy->item())
-                for (const auto& [id, level] : applied) Enchant::apply(*copy, id, level);
-            return true;
-        });
 
         std::string text = std::string(stack->name()) + " に付けました:";
         for (const auto& [id, level] : applied) {
@@ -73,6 +67,14 @@ namespace {
             text += part;
         }
         CommandManager::print(text);
+        return applied;
+    }
+
+    // Client thread: the same enchants on the client's copy of the held item, so the hotbar shows them
+    void applyToCopy(Actor& local, const Wanted& applied) {
+        ItemStack* copy = local.getCarriedItem();
+        if (copy && copy->item())
+            for (const auto& [id, level] : applied) Enchant::apply(*copy, id, level);
     }
 
     // Client thread, remote server: let the server run the vanilla /enchant for us
@@ -132,7 +134,10 @@ void EnchantCommand::execute(const std::vector<std::string>& args) {
     }
 
     if (PlayerTick::ticking(Side::Server)) {   // the world runs on this PC
-        PlayerTick::runOnOwnServerPlayer([wanted](Actor& server) { enchantHeld(server, wanted); });
+        auto applied = std::make_shared<Wanted>();
+        PlayerTick::runOnServerThenClient(
+            [wanted, applied](Actor& server) { *applied = enchantHeld(server, wanted); return !applied->empty(); },
+            [applied](Actor& local) { applyToCopy(local, *applied); });
         return;
     }
     if (!CommandSender::available()) {

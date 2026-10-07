@@ -5,6 +5,7 @@
 #include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <cstdio>
+#include <memory>
 
 /*
  * DUPE
@@ -53,19 +54,17 @@ namespace {
 }
 
 void DupeCommand::execute(const std::vector<std::string>& args) {
-    using PlayerTick::Side;
     if (!Require::inWorld() || !Require::ownWorld()) return;
 
     int wanted = 0;   // 0 = max stack size
     if (args.size() > 1) {
-        const auto count = Args::parseInt(args[1]);
-        if (!count || *count < 1) { CommandManager::printUsage(*this); return; }
-        wanted = *count;   // more than the max stack size is capped by fill()
+        const auto parsed = Args::parseInt(args[1]);
+        if (!parsed || *parsed < 1) { CommandManager::printUsage(*this); return; }
+        wanted = *parsed;   // more than the max stack size is capped by fill()
     }
     // Server first (the real inventory, reports the result), then the client's copy to match it
-    PlayerTick::runOnOwnServerPlayer([wanted](Actor& server) {
-        const int count = fill(server, wanted, true);
-        if (count > 0)
-            PlayerTick::run(Side::Client, [count](Actor& local) { fill(local, count, false); return true; });
-    });
+    auto count = std::make_shared<int>(0);
+    PlayerTick::runOnServerThenClient(
+        [wanted, count](Actor& server) { *count = fill(server, wanted, true); return *count > 0; },
+        [count](Actor& local) { fill(local, *count, false); });
 }

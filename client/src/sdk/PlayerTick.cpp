@@ -128,6 +128,13 @@ void PlayerTick::runOnOwnServerPlayer(std::function<void(Actor&)> fn) {
     });
 }
 
+void PlayerTick::runOnServerThenClient(std::function<bool(Actor&)> serverFn, std::function<void(Actor&)> clientFn) {
+    runOnOwnServerPlayer([serverFn = std::move(serverFn), clientFn = std::move(clientFn)](Actor& server) {
+        if (!serverFn(server)) return;
+        run(Side::Client, [clientFn](Actor& local) { clientFn(local); return true; });
+    });
+}
+
 void PlayerTick::runOnSelf(std::function<void(Actor&, bool)> fn) {
     if (ticking(Side::Server)) {
         runOnOwnServerPlayer([fn = std::move(fn)](Actor& server) { fn(server, true); });

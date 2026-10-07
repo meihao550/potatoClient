@@ -16,19 +16,22 @@ Horion 風の内部 (DLL) クライアントを一から作って、チートク
 ### 1. 必要なもの
 - Windows 10 / 11 (x64)
 - Minecraft Bedrock **1.26.52**（GDK 版。Microsoft Store / Xbox アプリから入れたもの）
-- Visual Studio 2019 Build Tools（「C++ によるデスクトップ開発」をインストール）
+- Visual Studio 2019 以降（2022 / 2026 の Community や Build Tools でも OK）。「C++ によるデスクトップ開発」をインストール（CMake も一緒に入ります）
 - Python 3（64bit 版）
 - git（ビルド時に MinHook / Dear ImGui を自動ダウンロードするため）
 
 ### 2. ビルド
-プロジェクトのフォルダ（`C:\minefolder`）でコマンドを実行します。
+1. スタートメニューから **「Developer PowerShell for VS」**（または「Developer Command Prompt for VS」）を開く。VS に付いている CMake とコンパイラが使えるようになります
+2. プロジェクトのフォルダ（`CMakeLists.txt` があるフォルダ）に移動して、次を実行
 ```
-set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-%CMAKE% -S . -B build -G "Visual Studio 16 2019" -A x64
-%CMAKE% --build build --config Release
+cmake -S . -B build -A x64
+cmake --build build --config Release
 ```
 `build\Release\client.dll` ができれば成功です（`client.pdb` はクラッシュ解析用）。
 2 回目以降はソースを変えたら `--build` の行だけ実行すれば OK です。
+- CMake は入っている中で一番新しい Visual Studio を自動で使います
+- 「`cmake` が見つからない」と出たら、普通の PowerShell / コマンドプロンプトで開いています。Developer PowerShell から実行してください
+- 「generator does not match」と出たら、前に別の VS で作った `build` フォルダが残っています。`build` フォルダを消してからやり直してください
 
 #### Docker でビルドする（任意）
 Visual Studio を入れずに DLL だけ作りたいときは、同梱の `Dockerfile` が使えます。Docker を **Windows コンテナ** モードにしておく必要があります（ゲームへの注入はコンテナではできません。ビルド専用です）。

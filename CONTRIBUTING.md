@@ -19,7 +19,7 @@ layout, the threading rules and how to add modules and commands.
 
 - Windows 10 / 11 (x64)
 - Minecraft Bedrock **1.26.52**, GDK build (needed to test, not to build)
-- Visual Studio 2019 Build Tools with "Desktop development with C++", **or** Docker in Windows-containers mode
+- Visual Studio 2019 or later (2022 / 2026, Community or Build Tools) with "Desktop development with C++", **or** Docker in Windows-containers mode
 - Python 3.10 or later (64-bit) for `injector/injector.py` and `tools/dump_image.py`
 - git
 
@@ -27,14 +27,15 @@ layout, the threading rules and how to add modules and commands.
 
 ### Locally
 
-From the project folder:
+From the project folder, in a **Developer PowerShell for VS**:
 ```
-set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-%CMAKE% -S . -B build -G "Visual Studio 16 2019" -A x64
-%CMAKE% --build build --config Release
+cmake -S . -B build -A x64
+cmake --build build --config Release
 ```
 Output: `build\Release\client.dll` and `client.pdb`. New `.cpp` files under `client/src/` are
-picked up automatically.
+picked up automatically. CI builds with the latest MSVC on every push, so keep the code free of
+compiler-specific shortcuts (for example, include every standard header you use; newer MSVC
+versions no longer pull in `<string>` and friends indirectly).
 
 ### With Docker
 

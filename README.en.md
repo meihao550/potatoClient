@@ -18,19 +18,22 @@ New to the code? Start with **[docs/READING_THE_CODE.md](docs/READING_THE_CODE.m
 ### 1. Requirements
 - Windows 10 / 11 (x64)
 - Minecraft Bedrock **1.26.52** (the GDK build, installed from the Microsoft Store or the Xbox app)
-- Visual Studio 2019 Build Tools (with the "Desktop development with C++" workload)
+- Visual Studio 2019 or later (2022 / 2026, Community or Build Tools) with the "Desktop development with C++" workload (it includes CMake)
 - Python 3.10 or later (64-bit)
 - git (the build downloads MinHook and Dear ImGui automatically)
 
 ### 2. Build
-Run these commands in the project folder (the one that contains `CMakeLists.txt`):
+1. Open **"Developer PowerShell for VS"** (or "Developer Command Prompt for VS") from the Start menu. It puts Visual Studio's CMake and compiler on the PATH.
+2. Go to the project folder (the one that contains `CMakeLists.txt`) and run:
 ```
-set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-%CMAKE% -S . -B build -G "Visual Studio 16 2019" -A x64
-%CMAKE% --build build --config Release
+cmake -S . -B build -A x64
+cmake --build build --config Release
 ```
 The build succeeded if `build\Release\client.dll` exists (`client.pdb` is for crash analysis).
 After the first build, only the `--build` line needs to be run again when you change the source.
+- CMake picks the newest installed Visual Studio automatically
+- "`cmake` is not recognized": you are in a plain PowerShell / Command Prompt. Use the Developer PowerShell
+- "generator does not match": a `build` folder made with another Visual Studio version is still there. Delete `build` and run both commands again
 
 #### Building with Docker (optional)
 If you only want the DLL and don't want to install Visual Studio, you can use the bundled `Dockerfile`. Docker must be in **Windows containers** mode. The container only builds the DLL: injecting it into the game cannot be done from a container.

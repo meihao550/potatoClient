@@ -181,3 +181,29 @@ class Command {
 - **Threading**: `execute` runs on the render thread, so use `PlayerTick::run*` for anything
   that touches the game, and `CommandManager::print` to report.
 
+## 6. The SDK layer
+
+The game has no symbols, so the SDK locates things in three ways. All of them are collected in
+`sdk/Offsets.h`:
+
+| Kind | Example | How it is used |
+|---|---|---|
+| **Field offsets** | `Offsets::Actor::stateVector = 0x218` | `Actor.h` turns them into accessors (`player.stateVector()`) |
+| **Virtual function slots** | `Offsets::Actor::VIndex::teleportTo = 21` | `Memory::callVirtual<Ret, Args...>(obj, index, args...)` |
+| **Byte signatures** | `Offsets::Sig::localPlayerVtable` | `Memory::findSig(pattern)` scans the exe; `Memory::resolveRel32` follows the `lea`/`call` operand to the real address |
+
+Guidelines that the existing code follows:
+
+- **Call the game's own functions to change state** (`setItem`, `teleportTo`, `applyEnchant`, ...)
+  rather than writing fields. Then the game's own rules and network sync still apply.
+- **Spell out `callVirtual`'s template arguments**, for example `callVirtual<void, const Vec3&, bool>`,
+  so that references are not silently turned into copies.
+- **Read unknown pointers with `Memory::safeRead`** when they might be invalid. It uses SEH, so it
+  returns `false` instead of crashing the game.
+- **Never hard-code an address.** The exe is relocated (ASLR) and changes with every update. Use
+  a signature, or follow pointers from an object you already have.
+- **Fail safely when a signature is missing.** A feature must disable itself instead of crashing.
+  Commands check an `available()` function first (`EnchantCommand` checks `CommandSender::available()`).
+  A module that depends on a signature should override `isAvailable()`. The menu then disables its
+  checkbox and shows 「シグネチャ未検出のため無効」 ("disabled: signature not found").
+

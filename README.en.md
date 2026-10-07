@@ -192,3 +192,8 @@ The exe has almost no class names (RTTI) and no fixed pointer to the player, so 
   - The packet takes over the command string's buffer, but that buffer was allocated by the DLL's CRT. So that the game doesn't free it, we take it back after sending and then destroy the packet
 - Manual: [docs/ENCHANT.md](docs/ENCHANT.md) (Japanese only)
 
+### 9. Inventory / AutoTotem — `client/src/sdk/PlayerItems.cpp`, `modules/InventoryView.cpp`, `modules/AutoTotem.cpp`
+- **Inventory**: PlayerInventory at `Actor+0x5B8` → Inventory at `+0xB8` (a Container with 36 slots: 0..8 hotbar, 9..35 the rest). Same path as `getCarriedItem` (77). Container's virtual functions are `getItem` (7) / `setItem` (12) / `removeItem` (14) / `getContainerSize` (20)
+- **Off hand**: not part of the inventory; it is slot 1 of the 2-slot "hand container" returned by `ActorEquipment::getHandContainer(EntityContext&)`. That function has no signature, so its call target is read at runtime from the `mov rsi,rcx / add rcx,8 / call ...` at the start of `Actor::getEquippedTotem` (79) (`Actor+8` is the EntityContext)
+- **AutoTotem**: decides "no totem in the off hand & one in the inventory" from the client-side copy, then on the server thread calls `setItem` (move the off-hand item out of the way) → `setOffhandSlot` (78) → `removeItem` on the ServerPlayer. Since the game's own functions do the moving, no manual sync like dupe's is needed
+

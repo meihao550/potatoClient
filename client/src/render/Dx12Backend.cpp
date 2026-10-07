@@ -131,10 +131,11 @@ void Dx12Backend::render(IDXGISwapChain3* swapChain) {
     g_cmdList->ResourceBarrier(1, &barrier);
     g_cmdList->Close();
 
+    ID3D12CommandQueue* queue = commandQueue;
     ID3D12CommandList* lists[] = { g_cmdList };
-    commandQueue->ExecuteCommandLists(1, lists);
+    queue->ExecuteCommandLists(1, lists);
     frame.fenceValue = ++g_fenceCounter;
-    commandQueue->Signal(g_fence, frame.fenceValue);
+    queue->Signal(g_fence, frame.fenceValue);
 }
 
 void Dx12Backend::releaseBuffers() {

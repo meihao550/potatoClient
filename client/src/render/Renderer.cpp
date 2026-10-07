@@ -33,9 +33,11 @@ namespace {
     void __stdcall hkExecuteCommandLists(ID3D12CommandQueue* queue, UINT count, ID3D12CommandList* const* lists) {
         // Remember the game's DIRECT queue; ImGui must submit on the queue that owns the swapchain.
         if (!Dx12Backend::commandQueue && queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
-            queue->AddRef();
-            Dx12Backend::commandQueue = queue;
-            LOG("captured D3D12 command queue %p", queue);
+            ID3D12CommandQueue* expected = nullptr;
+            if (Dx12Backend::commandQueue.compare_exchange_strong(expected, queue)) {   // first thread wins
+                queue->AddRef();
+                LOG("captured D3D12 command queue %p", queue);
+            }
         }
         oExecuteCommandLists(queue, count, lists);
     }
@@ -148,6 +150,6 @@ void Renderer::shutdown() {
     std::lock_guard lock(g_renderMutex);
     if (g_api == Api::Dx12) Dx12Backend::shutdown();
     if (g_api == Api::Dx11) Dx11Backend::shutdown();
-    if (Dx12Backend::commandQueue) { Dx12Backend::commandQueue->Release(); Dx12Backend::commandQueue = nullptr; }
+    if (ID3D12CommandQueue* queue = Dx12Backend::commandQueue.exchange(nullptr)) queue->Release();
     g_api = Api::Unknown;
 }

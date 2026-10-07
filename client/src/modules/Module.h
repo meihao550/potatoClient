@@ -1,4 +1,6 @@
 #pragma once
+#include <atomic>
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -19,12 +21,16 @@ public:
     // Every frame while enabled, on the render thread (draw with ImGui)
     virtual void onRender() {}
 
+    // Called from the window thread (key binds), the render thread (menu) and the unload
+    // thread, so switching is serialized: onEnable / onDisable never run twice at once.
     void setEnabled(bool on) {
-        if (on == m_enabled || (on && !isAvailable())) return;
-        if (on) m_enabled = onEnable();
-        else { m_enabled = false; onDisable(); }
+        std::lock_guard lock(m_switchMutex);
+        switchTo(on);
     }
-    void toggle() { setEnabled(!m_enabled); }
+    void toggle() {
+        std::lock_guard lock(m_switchMutex);
+        switchTo(!m_enabled);
+    }
 
     bool isEnabled() const { return m_enabled; }
     const std::string& name() const { return m_name; }
@@ -33,8 +39,15 @@ public:
     void setKey(int vk) { m_key = vk; }
 
 private:
+    void switchTo(bool on) {
+        if (on == m_enabled || (on && !isAvailable())) return;
+        if (on) m_enabled = onEnable();
+        else { m_enabled = false; onDisable(); }
+    }
+
     std::string m_name;
     std::string m_description;
-    int m_key = 0;          // virtual-key code, 0 = unbound
-    bool m_enabled = false;
+    std::atomic<int> m_key = 0;          // virtual-key code, 0 = unbound
+    std::atomic<bool> m_enabled = false;   // read every tick / frame without the lock
+    std::mutex m_switchMutex;
 };

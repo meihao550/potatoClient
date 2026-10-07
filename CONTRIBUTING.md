@@ -90,3 +90,10 @@ When you add a user-visible feature, also document it in both `README.md` (Japan
 `README.en.md` (English). If you only write one language, say so in the pull request and someone
 can translate it.
 
+## Updating for a new game version
+
+Offset and signature updates are very welcome. Follow
+[README.en.md § When the game updates](README.en.md#when-the-game-updates-reverse-engineering-procedure),
+update the target version in both READMEs and in the header comment of `Offsets.h`, and say in the
+pull request which version you verified against.
+

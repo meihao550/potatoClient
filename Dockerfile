@@ -34,3 +34,8 @@ ARG GIT_VERSION=2.47.1
 ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.1/MinGit-${GIT_VERSION}-64-bit.zip C:\TEMP\mingit.zip
 RUN powershell -NoProfile -Command "Expand-Archive C:\TEMP\mingit.zip -DestinationPath C:\MinGit; Remove-Item C:\TEMP\mingit.zip" `
  && setx /M PATH "%PATH%;C:\MinGit\cmd;%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
+
+WORKDIR C:\src
+COPY . .
+RUN cmake -S . -B build -G "Visual Studio 16 2019" -A x64 `
+ && cmake --build build --config Release

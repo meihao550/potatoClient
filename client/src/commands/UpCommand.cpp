@@ -1,6 +1,7 @@
 #include "UpCommand.h"
 #include "CommandManager.h"
 #include "MoveCommands.h"
+#include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <cmath>
 #include <cstdio>

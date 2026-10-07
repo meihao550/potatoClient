@@ -2,8 +2,10 @@
 #include "commands/CommandManager.h"
 #include "core/Logger.h"
 #include "modules/ModuleManager.h"
+#include <Windows.h>
 #include <imgui.h>
 #include <cstdio>
+#include <string>
 
 namespace {
     Module* g_binding = nullptr;   // module waiting for a new key

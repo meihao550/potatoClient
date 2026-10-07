@@ -1,9 +1,10 @@
 #include "MoveCommands.h"
 #include "CommandManager.h"
+#include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
+#include <Windows.h>
 #include <cmath>
 #include <cstdio>
-#include <Windows.h>
 #include <cstdlib>
 #include <optional>
 

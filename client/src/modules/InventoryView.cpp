@@ -1,6 +1,7 @@
 #include "InventoryView.h"
 #include "gui/Menu.h"
 #include "sdk/PlayerItems.h"
+#include <Windows.h>
 #include <imgui.h>
 #include <cstdio>
 #include <cstring>

@@ -1,5 +1,6 @@
 #include "DupeCommand.h"
 #include "CommandManager.h"
+#include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
 #include <cstdio>
 #include <cstdlib>

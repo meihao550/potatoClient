@@ -1,4 +1,5 @@
 #include "PlayerTick.h"
+#include "Actor.h"
 #include "core/Hooks.h"
 #include "core/Logger.h"
 #include <Windows.h>

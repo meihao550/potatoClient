@@ -1,5 +1,6 @@
 #pragma once
 #include "Module.h"
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_map>

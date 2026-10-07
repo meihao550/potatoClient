@@ -1,6 +1,7 @@
 #pragma once
-#include "Actor.h"
 #include <functional>
+
+class Actor;
 
 // Hooks Actor::normalTick of LocalPlayer (client) and ServerPlayer (the built-in
 // server of a single-player world) so we can run code on each side's own thread.

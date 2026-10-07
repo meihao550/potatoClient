@@ -261,3 +261,11 @@ command messages) are in Japanese. Keep that split.
    ```
 3. Register it in `CommandManager::init()`.
 
+### Using a new game function
+
+1. Find it in the dumped exe (see the next section) and add its signature or vtable index to
+   `sdk/Offsets.h`, with a comment that says how it was found.
+2. Wrap it in `sdk/` (an accessor in `Actor.h`, or a new `sdk/Xxx.{h,cpp}` with an `init()` that
+   resolves the signature and an `available()` check).
+3. If it needs `init()`, call it from `dllmain.cpp` before `CommandManager::init()`.
+

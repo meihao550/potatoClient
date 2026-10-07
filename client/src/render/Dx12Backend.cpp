@@ -1,10 +1,8 @@
 #include "Backends.h"
-#include "core/InputFocus.h"
+#include "Overlay.h"
 #include "core/Logger.h"
-#include "gui/Menu.h"
 #include <imgui.h>
 #include <imgui_impl_dx12.h>
-#include <imgui_impl_win32.h>
 #include <vector>
 
 /*
@@ -82,9 +80,7 @@ bool Dx12Backend::init(IDXGISwapChain3* swapChain, ID3D12Device* device) {
 
     createBuffers(swapChain);
 
-    ImGui::CreateContext();
-    Menu::loadFonts();
-    ImGui_ImplWin32_Init(desc.OutputWindow);
+    Overlay::init(desc.OutputWindow);
 
     ImGui_ImplDX12_InitInfo info;
     info.Device = device;
@@ -104,12 +100,7 @@ void Dx12Backend::render(IDXGISwapChain3* swapChain) {
     if (!g_buffersReady) return;
 
     ImGui_ImplDX12_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-    ImGui::GetIO().MouseDrawCursor = InputFocus::menuOpen;
-    if (InputFocus::menuOpen) ClipCursor(nullptr);   // free the mouse while the menu is open
-    Menu::render();
-    ImGui::Render();
+    Overlay::buildFrame();
 
     Frame& frame = g_frames[swapChain->GetCurrentBackBufferIndex()];
     waitFor(frame.fenceValue);
@@ -150,8 +141,7 @@ void Dx12Backend::shutdown() {
     if (!g_device) return;
     releaseBuffers();
     ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
+    Overlay::shutdown();
     for (auto& f : g_frames)
         if (f.allocator) f.allocator->Release();
     g_frames.clear();

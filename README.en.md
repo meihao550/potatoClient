@@ -17,3 +17,15 @@ Target: **Minecraft Bedrock 1.26.52 (GDK build / `Minecraft.Windows.exe`)**
 - Python 3.10 or later (64-bit)
 - git (the build downloads MinHook and Dear ImGui automatically)
 
+### 2. Build
+Run these commands in the project folder (the one that contains `CMakeLists.txt`):
+```
+set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+%CMAKE% -S . -B build -G "Visual Studio 16 2019" -A x64
+%CMAKE% --build build --config Release
+```
+The build succeeded if `build\Release\client.dll` exists (`client.pdb` is for crash analysis).
+After the first build, only the `--build` line needs to be run again when you change the source.
+
+> The CMake project is named `LearnClient`, and the injector's docstring still uses that name. It is the same project as PotatoClient.
+

@@ -8,3 +8,12 @@ Target: **Minecraft Bedrock 1.26.52 (GDK build / `Minecraft.Windows.exe`)**
 > Use it only in single-player or in your own worlds. Using it on public servers or Realms breaks their rules and can get you banned.
 > Some features also work in multiplayer, but only use them on servers that allow it.
 
+## How to use
+
+### 1. Requirements
+- Windows 10 / 11 (x64)
+- Minecraft Bedrock **1.26.52** (the GDK build, installed from the Microsoft Store or the Xbox app)
+- Visual Studio 2019 Build Tools (with the "Desktop development with C++" workload)
+- Python 3.10 or later (64-bit)
+- git (the build downloads MinHook and Dear ImGui automatically)
+

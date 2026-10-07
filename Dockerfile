@@ -28,3 +28,9 @@ RUN (start /w C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
         --add Microsoft.VisualStudio.Component.Windows10SDK.19041 `
      || IF "%ERRORLEVEL%"=="3010" EXIT 0) `
  && del /q C:\TEMP\vs_buildtools.exe
+
+# git is needed at configure time: CMake's FetchContent clones MinHook and Dear ImGui
+ARG GIT_VERSION=2.47.1
+ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.1/MinGit-${GIT_VERSION}-64-bit.zip C:\TEMP\mingit.zip
+RUN powershell -NoProfile -Command "Expand-Archive C:\TEMP\mingit.zip -DestinationPath C:\MinGit; Remove-Item C:\TEMP\mingit.zip" `
+ && setx /M PATH "%PATH%;C:\MinGit\cmd;%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"

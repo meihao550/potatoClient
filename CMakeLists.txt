@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Static CRT so the DLL has no runtime dependencies inside the game process
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+# Use the extraction time as the timestamp for files extracted from URL downloads (avoids the warning on CMake 3.24+).
+# DOWNLOAD_EXTRACT_TIMESTAMP isn't used because VS 2019's CMake 3.20 doesn't know it and fails
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
 
 include(FetchContent)
 FetchContent_Declare(minhook
@@ -15,8 +20,7 @@ FetchContent_Declare(imgui
     GIT_TAG        v1.91.9)
 # JSON for the config file (v3.12.0+ also configures with CMake 4)
 FetchContent_Declare(json
-    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
 FetchContent_MakeAvailable(minhook json)
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)

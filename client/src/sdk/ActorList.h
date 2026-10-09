@@ -3,7 +3,8 @@
 #include <vector>
 
 namespace ActorList {
-    // Every actor the client level knows about (mobs, players, items, ...).
+    // Every actor the client level knows about (mobs, players, items, ...), written into `out`
+    // (cleared first). Reusing the same vector every tick avoids an allocation per tick.
     // Game thread only - call it from onTick.
-    std::vector<Actor*> get(Actor& player);
+    void get(Actor& player, std::vector<Actor*>& out);
 }

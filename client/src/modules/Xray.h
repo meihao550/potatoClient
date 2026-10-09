@@ -1,5 +1,7 @@
 #pragma once
 #include "Module.h"
+#include "sdk/Offsets.h"
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -14,6 +16,8 @@ public:
     bool onEnable() override;
     void onDisable() override;
     void renderSettings() override;
+    void saveExtra(nlohmann::json& out) override;
+    void loadExtra(const nlohmann::json& in) override;
 
 private:
     struct Group {                     // one row in the menu, e.g. "ダイヤ" -> {"diamond_ore"}
@@ -24,7 +28,7 @@ private:
     struct OriginalState {             // cached copy inside each Block permutation
         Block* block;
         uint8_t isOpaqueFullBlock, light;
-        uint16_t occlusionShapes[7];
+        uint16_t occlusionShapes[Offsets::Block::occlusionShapeCount];
     };
     struct Original {                  // a block's real values, captured before we ever touch it
         std::string name;
@@ -38,13 +42,14 @@ private:
     void hide(BlockType* b, const Original& o) const;
 
     bool isVisible(const std::string& name) const;
+    // Both need m_mutex held
     bool apply();                      // patch/unpatch every block according to the groups
     void restoreAll();
 
     std::vector<Group> m_groups;
     std::vector<std::string> m_custom;
     std::unordered_map<BlockType*, Original> m_originals;
-    bool m_letLightThrough = true;
+    BoolSetting m_letLightThrough{ "letLightThrough", "光を通す (鉱石が暗くならない)", true };
     std::string m_status;
-    std::mutex m_mutex;
+    std::mutex m_mutex;                // guards everything above
 };

@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "Backends.h"
 #include "core/Hooks.h"
+#include "core/InFlight.h"
 #include "core/Logger.h"
 #include "gui/Input.h"
 #include <Windows.h>
@@ -31,11 +32,14 @@ namespace {
     ExecuteCommandLists_t oExecuteCommandLists = nullptr;
 
     void __stdcall hkExecuteCommandLists(ID3D12CommandQueue* queue, UINT count, ID3D12CommandList* const* lists) {
+        InFlight::Guard guard;   // see core/InFlight.h
         // Remember the game's DIRECT queue; ImGui must submit on the queue that owns the swapchain.
         if (!Dx12Backend::commandQueue && queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
-            queue->AddRef();
-            Dx12Backend::commandQueue = queue;
-            LOG("captured D3D12 command queue %p", queue);
+            ID3D12CommandQueue* expected = nullptr;
+            if (Dx12Backend::commandQueue.compare_exchange_strong(expected, queue)) {   // first thread wins
+                queue->AddRef();
+                LOG("captured D3D12 command queue %p", queue);
+            }
         }
         oExecuteCommandLists(queue, count, lists);
     }
@@ -66,6 +70,7 @@ namespace {
     }
 
     HRESULT __stdcall hkPresent(IDXGISwapChain* swapChain, UINT sync, UINT flags) {
+        InFlight::Guard guard;   // see core/InFlight.h
         {
             std::lock_guard lock(g_renderMutex);
             if (g_api == Api::Unknown) initApi(swapChain);
@@ -83,6 +88,7 @@ namespace {
     }
 
     HRESULT __stdcall hkResizeBuffers(IDXGISwapChain* sc, UINT count, UINT w, UINT h, DXGI_FORMAT fmt, UINT flags) {
+        InFlight::Guard guard;   // see core/InFlight.h
         {
             // The swapchain can't resize while we hold references to its back buffers
             std::lock_guard lock(g_renderMutex);
@@ -93,7 +99,7 @@ namespace {
 
     bool getVtables(void** present, void** resize, void** execute) {
         WNDCLASSEXW wc{ sizeof(wc), CS_HREDRAW | CS_VREDRAW, DefWindowProcW, 0, 0, GetModuleHandleW(nullptr),
-                        nullptr, nullptr, nullptr, nullptr, L"LearnClientDummy", nullptr };
+                        nullptr, nullptr, nullptr, nullptr, L"PotatoClientDummy", nullptr };
         RegisterClassExW(&wc);
         HWND hwnd = CreateWindowW(wc.lpszClassName, L"", WS_OVERLAPPEDWINDOW, 0, 0, 100, 100, nullptr, nullptr, wc.hInstance, nullptr);
 
@@ -138,16 +144,18 @@ bool Renderer::init() {
         LOG("failed to create dummy D3D12 swapchain");
         return false;
     }
-    bool ok = Hooks::create("ID3D12CommandQueue::Execute", execute, &hkExecuteCommandLists, reinterpret_cast<void**>(&oExecuteCommandLists));
-    ok &= Hooks::create("IDXGISwapChain::ResizeBuffers", resize, &hkResizeBuffers, reinterpret_cast<void**>(&oResizeBuffers));
-    ok &= Hooks::create("IDXGISwapChain::Present", present, &hkPresent, reinterpret_cast<void**>(&oPresent));
+    bool ok = Hooks::create("ID3D12CommandQueue::Execute", execute, &hkExecuteCommandLists, oExecuteCommandLists);
+    ok &= Hooks::create("IDXGISwapChain::ResizeBuffers", resize, &hkResizeBuffers, oResizeBuffers);
+    ok &= Hooks::create("IDXGISwapChain::Present", present, &hkPresent, oPresent);
     return ok;
 }
 
 void Renderer::shutdown() {
     std::lock_guard lock(g_renderMutex);
-    if (g_api == Api::Dx12) Dx12Backend::shutdown();
-    if (g_api == Api::Dx11) Dx11Backend::shutdown();
-    if (Dx12Backend::commandQueue) { Dx12Backend::commandQueue->Release(); Dx12Backend::commandQueue = nullptr; }
+    // Both, whatever g_api says: a backend whose init failed (Api::Failed) still holds what it
+    // created before failing. Each one only releases what it actually set up.
+    Dx12Backend::shutdown();
+    Dx11Backend::shutdown();
+    if (ID3D12CommandQueue* queue = Dx12Backend::commandQueue.exchange(nullptr)) queue->Release();
     g_api = Api::Unknown;
 }

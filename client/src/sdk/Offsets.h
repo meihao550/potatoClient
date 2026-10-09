@@ -14,15 +14,19 @@ namespace Offsets {
         constexpr size_t lightBlock    = 0x166;  // Brightness (uint8, 0..15)
         constexpr size_t permutations  = 0x228;  // std::vector<std::unique_ptr<Block>> mBlockPermutations
         constexpr size_t defaultState  = 0x240;  // Block const*
+        namespace Flags2 {                       // bits of the flags2 byte
+            constexpr unsigned char ignoreForInsideCube = 1 << 3;   // mIgnoreBlockForInsideCubeRenderer
+            constexpr unsigned char isOpaqueFullBlock   = 1 << 4;   // mIsOpaqueFullBlock
+        }
     }
 
     // Block = one state/permutation of a BlockType. It caches some BlockType data
     // that the renderer uses for face culling and lighting.
     namespace Block {
-        constexpr size_t blockType        = 0x68;  // BlockType*
-        constexpr size_t isOpaqueFullBlock = 0xA3; // mDirectData.mIsOpaqueFullBlock (bool)
-        constexpr size_t light            = 0xA5;  // mDirectData.mLight (how much light it blocks)
-        constexpr size_t occlusionShapes  = 0xBE;  // uint16 mOcclusionShapeHandle + uint16[6] per face (0 = empty, 1 = full cube)
+        constexpr size_t blockType           = 0x68;  // BlockType*
+        constexpr size_t isOpaqueFullBlock   = 0xA3;  // mDirectData.mIsOpaqueFullBlock (bool)
+        constexpr size_t light               = 0xA5;  // mDirectData.mLight (how much light it blocks)
+        constexpr size_t occlusionShapes     = 0xBE;  // uint16 mOcclusionShapeHandle + uint16[6] per face (0 = empty, 1 = full cube)
         constexpr size_t occlusionShapeCount = 7;
     }
 
@@ -39,18 +43,18 @@ namespace Offsets {
 
     // Actor (base of LocalPlayer). Field order from LeviLamina's Actor.h, checked on the live client.
     namespace Actor {
-        constexpr size_t dimension   = 0x1C8;  // WeakRef<Dimension>: first qword is the Dimension*
-        constexpr size_t level       = 0x1D8;  // Level* (ClientLevel on the client)
-        constexpr size_t stateVector = 0x218;  // BuiltInActorComponents::mStateVectorComponent* (pos, posPrev, posDelta)
-        constexpr size_t aabbShape   = 0x220;  // BuiltInActorComponents::mAABBShapeComponent*   (AABB, width, height)
-        constexpr size_t rotation    = 0x228;  // BuiltInActorComponents::mActorRotationComponent* (pitch, yaw, prev pitch, prev yaw)
         constexpr size_t entityContext   = 0x08;   // EntityContext (what ActorEquipment::getHandContainer takes)
+        constexpr size_t dimension       = 0x1C8;  // WeakRef<Dimension>: first qword is the Dimension*
+        constexpr size_t level           = 0x1D8;  // Level* (ClientLevel on the client)
+        constexpr size_t stateVector     = 0x218;  // BuiltInActorComponents::mStateVectorComponent* (pos, posPrev, posDelta)
+        constexpr size_t aabbShape       = 0x220;  // BuiltInActorComponents::mAABBShapeComponent*   (AABB, width, height)
+        constexpr size_t rotation        = 0x228;  // BuiltInActorComponents::mActorRotationComponent* (pitch, yaw, prev pitch, prev yaw)
         constexpr size_t playerInventory = 0x5B8;  // Player::mInventory (std::unique_ptr<PlayerInventory>) - players only
-        namespace VIndex {                     // virtual function slots (same order as Actor.h)
-            constexpr size_t teleportTo     = 21;  // (Vec3 const& pos, bool stopRiding, int cause, int sourceType, bool keepVelocity)
-            constexpr size_t normalTick     = 24;  // called once per game tick on the game thread
-            constexpr size_t getCarriedItem = 77;  // ItemStack const& () - the selected hotbar slot inside the inventory
-            constexpr size_t setOffhandSlot = 78;  // (ItemStack const&) - copies the stack into the off hand
+        namespace VIndex {                         // virtual function slots (same order as Actor.h)
+            constexpr size_t teleportTo       = 21;  // (Vec3 const& pos, bool stopRiding, int cause, int sourceType, bool keepVelocity)
+            constexpr size_t normalTick       = 24;  // called once per game tick on the game thread
+            constexpr size_t getCarriedItem   = 77;  // ItemStack const& () - the selected hotbar slot inside the inventory
+            constexpr size_t setOffhandSlot   = 78;  // (ItemStack const&) - copies the stack into the off hand
             constexpr size_t getEquippedTotem = 79;  // ItemStack const& () - starts with a call to ActorEquipment::getHandContainer
         }
     }
@@ -87,7 +91,7 @@ namespace Offsets {
     namespace Level {
         namespace VIndex {
             constexpr size_t getRuntimeActorList = 325;  // std::vector<Actor*> () const - 3 slots before getPacketSender in ILevel.h
-            constexpr size_t getPacketSender = 328;  // PacketSender* () - must be called on the game thread
+            constexpr size_t getPacketSender     = 328;  // PacketSender* () - must be called on the game thread
         }
     }
 
@@ -134,6 +138,12 @@ namespace Offsets {
             "55 41 57 41 56 56 57 53 48 83 EC 48 48 8D 6C 24 40 48 C7 45 00 FE FF FF FF 49 89 D7 48 89 CE "
             "48 B8 02 00 00 00 01 00 00 00 48 89 41 08 66 C7 41 10 00 00 0F 57 C0 0F 11 41 18 C7 41 28 00 00 00 00 "
             "48 8D 05 ?? ?? ?? ?? 48 89 01";
+        // Where the "lea rax, [CommandRequestPacket::vftable]" above starts (offset 3 = rel32, length 7)
+        constexpr size_t commandRequestPacketVtableLea = 0x41;
+        // Actor::getEquippedTotem (vtable 79) starts with  mov rsi, rcx / add rcx, 8 / call getHandContainer.
+        // These bytes are searched in its first getHandContainerSearchSize bytes; the E8 call is the last byte.
+        inline constexpr unsigned char getHandContainerCall[] = { 0x48, 0x89, 0xCE, 0x48, 0x83, 0xC1, 0x08, 0xE8 };
+        constexpr size_t getHandContainerSearchSize = 0x40;
         // Start of EnchantUtils::applyEnchant(ItemStackBase&, EnchantmentInstance const&, bool allowNonVanilla).
         // Found from EnchantCommand::execute (the function that uses "commands.enchant.success").
         constexpr const char* applyEnchant =

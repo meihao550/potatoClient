@@ -1,5 +1,5 @@
 """
-LearnClient injector - classic LoadLibrary injection, written with ctypes so every
+PotatoClient injector - classic LoadLibrary injection, written with ctypes so every
 WinAPI call is visible.
 
   1. find the PID of Minecraft.Windows.exe          (CreateToolhelp32Snapshot)
@@ -135,7 +135,7 @@ def inject(dll_path: str) -> str:
 
 def main() -> None:
     root = tk.Tk()
-    root.title("LearnClient Injector")
+    root.title("PotatoClient Injector")
     root.resizable(False, False)
 
     dll_var = tk.StringVar(value=DEFAULT_DLL)

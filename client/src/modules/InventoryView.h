@@ -1,5 +1,6 @@
 #pragma once
 #include "Module.h"
+#include "sdk/PlayerTick.h"
 #include <mutex>
 #include <string>
 
@@ -7,11 +8,13 @@
 // Read on the game thread (onTick), drawn on the render thread (onRender) from a copy.
 class InventoryView : public Module {
 public:
-    InventoryView() : Module("Inventory", "インベントリの中身を画面に表示", 0) {}
+    InventoryView() : Module("Inventory", "インベントリの中身を画面に表示", Category::Player, 0) {
+        addSettings({ &m_cellWidth, &m_showOffhand });
+    }
     void onTick(Actor& player) override;
+    bool isAvailable() const override { return PlayerTick::hooked(PlayerTick::Side::Client); }
     void onRender() override;
     void onDisable() override;
-    void renderSettings() override;
 
 private:
     struct Slot {
@@ -27,6 +30,7 @@ private:
     std::mutex m_mutex;
     Snapshot m_snap;
 
-    float m_cellWidth = 64.0f;
-    bool m_showOffhand = true;
+    FloatSetting m_cellWidth{ "cellWidth", "マスの大きさ", 64.0f, 40.0f, 120.0f, "%.0f px" };
+    BoolSetting m_showOffhand{ "showOffhand", "オフハンドも表示", true,
+                               "メニューを開いている間はウィンドウを動かせる / マスにカーソルで名前" };
 };

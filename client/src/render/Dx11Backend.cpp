@@ -1,15 +1,15 @@
 #include "Backends.h"
+#include "Overlay.h"
 #include "core/Logger.h"
-#include "gui/Menu.h"
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
-#include <imgui_impl_win32.h>
 
 // Fallback for when the game runs on D3D11 (much simpler than D3D12).
 
 namespace {
     ID3D11Device* g_device = nullptr;
     ID3D11DeviceContext* g_context = nullptr;
+    bool g_imguiReady = false;   // ImGui_ImplDX11_Init succeeded (init can fail halfway)
 }
 
 bool Dx11Backend::init(IDXGISwapChain* swapChain, ID3D11Device* device) {
@@ -19,22 +19,15 @@ bool Dx11Backend::init(IDXGISwapChain* swapChain, ID3D11Device* device) {
     g_device->AddRef();
     g_device->GetImmediateContext(&g_context);
 
-    ImGui::CreateContext();
-    Menu::loadFonts();
-    ImGui_ImplWin32_Init(desc.OutputWindow);
-    const bool ok = ImGui_ImplDX11_Init(g_device, g_context);
-    LOG("dx11: imgui init %s", ok ? "ok" : "failed");
-    return ok;
+    Overlay::init(desc.OutputWindow);
+    g_imguiReady = ImGui_ImplDX11_Init(g_device, g_context);
+    LOG("dx11: imgui init %s", g_imguiReady ? "ok" : "failed");
+    return g_imguiReady;
 }
 
 void Dx11Backend::render(IDXGISwapChain* swapChain) {
     ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-    ImGui::GetIO().MouseDrawCursor = Menu::open;
-    if (Menu::open) ClipCursor(nullptr);
-    Menu::render();
-    ImGui::Render();
+    Overlay::buildFrame();
 
     // Create a render target view of the current back buffer for this frame only,
     // so ResizeBuffers never fails because we hold a reference.
@@ -52,10 +45,10 @@ void Dx11Backend::render(IDXGISwapChain* swapChain) {
 
 void Dx11Backend::shutdown() {
     if (!g_device) return;
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-    g_context->Release();
+    if (g_imguiReady) ImGui_ImplDX11_Shutdown();
+    g_imguiReady = false;
+    Overlay::shutdown();   // init() always created the context once g_device was set
+    if (g_context) { g_context->Release(); g_context = nullptr; }
     g_device->Release();
     g_device = nullptr;
 }

@@ -3,6 +3,7 @@
 #include "Offsets.h"
 #include "core/Memory.h"
 #include <cstdint>
+#include <optional>
 
 struct Vec3 { float x, y, z; };
 struct AABB { Vec3 min, max; };
@@ -12,6 +13,16 @@ struct StateVectorComponent { Vec3 pos, posPrev, posDelta; };
 struct AABBShapeComponent { AABB aabb; float width, height; };
 // Degrees. yaw 0 = facing +Z (south), -90 = facing +X (east)
 struct ActorRotationComponent { float pitch, yaw, prevPitch, prevYaw; };
+
+// The three components movement code needs together (see Actor::refs)
+struct ActorRefs {
+    StateVectorComponent& state;
+    AABBShapeComponent& shape;
+    ActorRotationComponent& rotation;
+
+    // Bottom center of the hitbox
+    Vec3 feet() const { return { state.pos.x, shape.aabb.min.y, state.pos.z }; }
+};
 
 class BlockSource {
 public:
@@ -25,18 +36,27 @@ public:
     }
 };
 
-class ItemStack {
+class ItemStack : public GameObject {
 public:
-    template <class T> T& at(size_t off) { return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(this) + off); }
-
-    // nullptr for an empty slot
+    // The Item (the kind of item), nullptr for an empty slot. The WeakPtr's counter is
+    // read with safeRead: a stale stack (item just destroyed) must not crash us.
     uint8_t* item() {
         auto* counter = at<uint8_t**>(Offsets::ItemStack::item);
-        return counter ? *counter : nullptr;
+        uint8_t* result = nullptr;
+        if (counter) Memory::safeRead(counter, &result, sizeof(result));
+        return result;
     }
     uint8_t& count()      { return at<uint8_t>(Offsets::ItemStack::count); }
-    uint8_t maxStackSize() { return item()[Offsets::Item::maxStackSize]; }
-    const char* name()    { return reinterpret_cast<MsvcString*>(item() + Offsets::Item::fullName)->c_str(); }
+    // 0 for an empty slot
+    uint8_t maxStackSize() {
+        uint8_t* i = item();
+        return i ? i[Offsets::Item::maxStackSize] : 0;
+    }
+    // "minecraft:diamond", "" for an empty slot
+    const char* name() {
+        uint8_t* i = item();
+        return i ? reinterpret_cast<MsvcString*>(i + Offsets::Item::fullName)->c_str() : "";
+    }
     bool isEmpty()        { return !item() || count() == 0; }
 };
 
@@ -59,13 +79,20 @@ public:
     }
 };
 
-class Actor {
+class Actor : public GameObject {
 public:
-    template <class T> T& at(size_t off) { return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(this) + off); }
-
     StateVectorComponent* stateVector() { return at<StateVectorComponent*>(Offsets::Actor::stateVector); }
     AABBShapeComponent* aabbShape()     { return at<AABBShapeComponent*>(Offsets::Actor::aabbShape); }
     ActorRotationComponent* rotation()  { return at<ActorRotationComponent*>(Offsets::Actor::rotation); }
+
+    // All three components at once, or nothing if any is missing (not a player / wrong offsets)
+    std::optional<ActorRefs> refs() {
+        StateVectorComponent* state = stateVector();
+        AABBShapeComponent* shape = aabbShape();
+        ActorRotationComponent* rot = rotation();
+        if (!state || !shape || !rot) return std::nullopt;
+        return ActorRefs{ *state, *shape, *rot };
+    }
 
     BlockSource* blockSource() {
         auto* dimension = at<uint8_t*>(Offsets::Actor::dimension);
@@ -94,16 +121,17 @@ public:
     // client = our LocalPlayer on a remote server: the client reports its own position
     //          to the server every tick, so we just write the new position ourselves.
     void moveFeetTo(const Vec3& feet, bool server) {
-        StateVectorComponent* state = stateVector();
-        AABBShapeComponent* shape = aabbShape();
-        if (!state || !shape) return;
-        const Vec3 eye{ feet.x, feet.y + (state->pos.y - shape->aabb.min.y), feet.z };
+        const auto r = refs();
+        if (!r) return;
+        StateVectorComponent& state = r->state;
+        AABB& box = r->shape.aabb;
+        const Vec3 eye{ feet.x, feet.y + (state.pos.y - box.min.y), feet.z };
         if (server) { teleportTo(eye); return; }
 
-        const Vec3 d{ eye.x - state->pos.x, eye.y - state->pos.y, eye.z - state->pos.z };
-        state->pos = eye;
-        state->posPrev = eye;          // no interpolation from the old spot
-        state->posDelta = { 0, 0, 0 };
-        for (Vec3* v : { &shape->aabb.min, &shape->aabb.max }) { v->x += d.x; v->y += d.y; v->z += d.z; }
+        const Vec3 d{ eye.x - state.pos.x, eye.y - state.pos.y, eye.z - state.pos.z };
+        state.pos = eye;
+        state.posPrev = eye;           // no interpolation from the old spot
+        state.posDelta = { 0, 0, 0 };
+        for (Vec3* v : { &box.min, &box.max }) { v->x += d.x; v->y += d.y; v->z += d.z; }
     }
 };

@@ -1,8 +1,12 @@
 #include "Memory.h"
+#include "Logger.h"
 #include <Windows.h>
 #include <Psapi.h>
-#include <vector>
+#include <algorithm>
+#include <cstring>
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace {
     MODULEINFO g_info{};
@@ -33,31 +37,58 @@ size_t Memory::moduleSize() { ensureInfo(); return g_info.SizeOfImage; }
 
 uintptr_t Memory::findSig(std::string_view pattern) {
     const auto bytes = parse(pattern);
-    if (bytes.empty()) return 0;
-    const auto* start = reinterpret_cast<const uint8_t*>(moduleBase());
-    const size_t size = moduleSize();
+    // Anchor = the first fixed byte. memchr jumps from one candidate to the next, which is
+    // far faster than testing every position.
+    size_t anchor = 0;
+    while (anchor < bytes.size() && !bytes[anchor]) ++anchor;
+    if (anchor == bytes.size()) return 0;   // empty, or wildcards only
 
-    // Only scan committed, executable/readable pages to avoid access violations
-    for (size_t off = 0; off < size;) {
+    const auto* moduleStart = reinterpret_cast<const uint8_t*>(moduleBase());
+    const auto* moduleEnd = moduleStart + moduleSize();
+    const uint8_t* first = nullptr;
+    int matches = 0;
+
+    // Only scan committed, readable pages of the exe itself to avoid access violations
+    for (const uint8_t* p = moduleStart; p < moduleEnd;) {
         MEMORY_BASIC_INFORMATION mbi{};
-        if (!VirtualQuery(start + off, &mbi, sizeof(mbi))) break;
-        const auto* regionStart = static_cast<const uint8_t*>(mbi.BaseAddress);
-        const size_t regionSize = mbi.RegionSize;
+        if (!VirtualQuery(p, &mbi, sizeof(mbi))) break;
+        const uint8_t* regionEnd = (std::min)(static_cast<const uint8_t*>(mbi.BaseAddress) + mbi.RegionSize, moduleEnd);
         const bool readable = mbi.State == MEM_COMMIT &&
             (mbi.Protect & (PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_READONLY | PAGE_READWRITE)) &&
             !(mbi.Protect & PAGE_GUARD);
-        if (readable && regionSize >= bytes.size()) {
-            for (size_t i = 0; i + bytes.size() <= regionSize; ++i) {
+        if (readable && static_cast<size_t>(regionEnd - p) >= bytes.size()) {
+            const uint8_t* lastStart = regionEnd - bytes.size();
+            for (const uint8_t* s = p; s <= lastStart;) {
+                const auto* hit = static_cast<const uint8_t*>(
+                    memchr(s + anchor, *bytes[anchor], static_cast<size_t>(lastStart - s) + 1));
+                if (!hit) break;
+                const uint8_t* candidate = hit - anchor;
                 bool match = true;
-                for (size_t j = 0; j < bytes.size(); ++j) {
-                    if (bytes[j] && regionStart[i + j] != *bytes[j]) { match = false; break; }
-                }
-                if (match) return reinterpret_cast<uintptr_t>(regionStart + i);
+                for (size_t j = 0; j < bytes.size(); ++j)
+                    if (bytes[j] && candidate[j] != *bytes[j]) { match = false; break; }
+                if (match && !matches++) first = candidate;
+                s = candidate + 1;
             }
         }
-        off = static_cast<size_t>(regionStart + regionSize - start);
+        p = regionEnd;
     }
-    return 0;
+    // After a game update a signature can start matching other code too; the first match
+    // may then be the wrong function, so say so.
+    if (matches > 1)
+        LOG("warning: signature matches %d places, using the first (exe+%#llx): %.*s",
+            matches, rva(reinterpret_cast<uintptr_t>(first)), static_cast<int>(pattern.size()), pattern.data());
+    return reinterpret_cast<uintptr_t>(first);
+}
+
+uintptr_t Memory::scanOrLog(const char* name, std::string_view pattern) {
+    const uintptr_t hit = findSig(pattern);
+    if (hit) LOG("%s at exe+%#llx", name, rva(hit));
+    else LOG("%s: signature not found (game updated? see Offsets.h)", name);
+    return hit;
+}
+
+unsigned long long Memory::rva(uintptr_t address) {
+    return static_cast<unsigned long long>(address - moduleBase());
 }
 
 bool Memory::safeRead(const void* src, void* dst, size_t size) {

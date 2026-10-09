@@ -1,13 +1,17 @@
 #pragma once
 #include "Module.h"
+#include "sdk/PlayerTick.h"
 
 // Walk/run faster: while WASD is held, the horizontal velocity is set to the chosen speed
 class Speed : public Module {
 public:
-    Speed() : Module("Speed", "移動を速くする (WASD を押している間)", 0) {}
+    Speed() : Module("Speed", "移動を速くする (WASD を押している間)", Category::Movement, 0) {
+        addSettings({ &m_speed });
+    }
     void onTick(Actor& player) override;
-    void renderSettings() override;
+    bool isAvailable() const override { return PlayerTick::hooked(PlayerTick::Side::Client); }
 
 private:
-    float m_speed = 0.5f;   // blocks per tick
+    FloatSetting m_speed{ "speed", "速さ", 0.5f, 0.1f, 3.0f, "%.2f ブロック/tick",
+                          "普通の歩き 約 0.22 / ダッシュ 約 0.28" };
 };

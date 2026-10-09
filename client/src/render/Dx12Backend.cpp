@@ -1,9 +1,8 @@
 #include "Backends.h"
+#include "Overlay.h"
 #include "core/Logger.h"
-#include "gui/Menu.h"
 #include <imgui.h>
 #include <imgui_impl_dx12.h>
-#include <imgui_impl_win32.h>
 #include <vector>
 
 /*
@@ -30,9 +29,12 @@ namespace {
     UINT64 g_fenceCounter = 0;
     std::vector<Frame> g_frames;
     bool g_buffersReady = false;
+    // How far init() got, so shutdown() only undoes what was done (init can fail halfway)
+    bool g_overlayReady = false;
+    bool g_imguiReady = false;
 
     void waitFor(UINT64 value) {
-        if (g_fence->GetCompletedValue() < value) {
+        if (g_fence && g_fence->GetCompletedValue() < value) {
             g_fence->SetEventOnCompletion(value, g_fenceEvent);
             WaitForSingleObject(g_fenceEvent, 1000);
         }
@@ -72,18 +74,24 @@ bool Dx12Backend::init(IDXGISwapChain3* swapChain, ID3D12Device* device) {
         LOG("dx12: descriptor heap creation failed");
         return false;
     }
-    for (auto& f : g_frames)
-        device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&f.allocator));
-    device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frames[0].allocator, nullptr, IID_PPV_ARGS(&g_cmdList));
+    for (auto& f : g_frames) {
+        if (FAILED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&f.allocator)))) {
+            LOG("dx12: command allocator creation failed");
+            return false;
+        }
+    }
+    if (FAILED(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frames[0].allocator, nullptr, IID_PPV_ARGS(&g_cmdList))) ||
+        FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_fence))) ||
+        !(g_fenceEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr))) {
+        LOG("dx12: command list / fence creation failed");
+        return false;
+    }
     g_cmdList->Close();
-    device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_fence));
-    g_fenceEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
     createBuffers(swapChain);
 
-    ImGui::CreateContext();
-    Menu::loadFonts();
-    ImGui_ImplWin32_Init(desc.OutputWindow);
+    Overlay::init(desc.OutputWindow);
+    g_overlayReady = true;
 
     ImGui_ImplDX12_InitInfo info;
     info.Device = device;
@@ -93,9 +101,9 @@ bool Dx12Backend::init(IDXGISwapChain3* swapChain, ID3D12Device* device) {
     info.SrvDescriptorHeap = g_srvHeap;
     info.LegacySingleSrvCpuDescriptor = g_srvHeap->GetCPUDescriptorHandleForHeapStart();
     info.LegacySingleSrvGpuDescriptor = g_srvHeap->GetGPUDescriptorHandleForHeapStart();
-    const bool ok = ImGui_ImplDX12_Init(&info);
-    LOG("dx12: %u back buffers, format %d, imgui init %s", desc.BufferCount, desc.BufferDesc.Format, ok ? "ok" : "failed");
-    return ok;
+    g_imguiReady = ImGui_ImplDX12_Init(&info);
+    LOG("dx12: %u back buffers, format %d, imgui init %s", desc.BufferCount, desc.BufferDesc.Format, g_imguiReady ? "ok" : "failed");
+    return g_imguiReady;
 }
 
 void Dx12Backend::render(IDXGISwapChain3* swapChain) {
@@ -103,12 +111,7 @@ void Dx12Backend::render(IDXGISwapChain3* swapChain) {
     if (!g_buffersReady) return;
 
     ImGui_ImplDX12_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-    ImGui::GetIO().MouseDrawCursor = Menu::open;
-    if (Menu::open) ClipCursor(nullptr);   // free the mouse while the menu is open
-    Menu::render();
-    ImGui::Render();
+    Overlay::buildFrame();
 
     Frame& frame = g_frames[swapChain->GetCurrentBackBufferIndex()];
     waitFor(frame.fenceValue);
@@ -131,10 +134,11 @@ void Dx12Backend::render(IDXGISwapChain3* swapChain) {
     g_cmdList->ResourceBarrier(1, &barrier);
     g_cmdList->Close();
 
+    ID3D12CommandQueue* queue = commandQueue;
     ID3D12CommandList* lists[] = { g_cmdList };
-    commandQueue->ExecuteCommandLists(1, lists);
+    queue->ExecuteCommandLists(1, lists);
     frame.fenceValue = ++g_fenceCounter;
-    commandQueue->Signal(g_fence, frame.fenceValue);
+    queue->Signal(g_fence, frame.fenceValue);
 }
 
 void Dx12Backend::releaseBuffers() {
@@ -147,17 +151,17 @@ void Dx12Backend::releaseBuffers() {
 void Dx12Backend::shutdown() {
     if (!g_device) return;
     releaseBuffers();
-    ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
+    if (g_imguiReady) ImGui_ImplDX12_Shutdown();
+    if (g_overlayReady) Overlay::shutdown();
+    g_imguiReady = g_overlayReady = false;
     for (auto& f : g_frames)
         if (f.allocator) f.allocator->Release();
     g_frames.clear();
-    if (g_cmdList) g_cmdList->Release();
-    if (g_fence) g_fence->Release();
-    if (g_fenceEvent) CloseHandle(g_fenceEvent);
-    if (g_rtvHeap) g_rtvHeap->Release();
-    if (g_srvHeap) g_srvHeap->Release();
+    if (g_cmdList) { g_cmdList->Release(); g_cmdList = nullptr; }
+    if (g_fence) { g_fence->Release(); g_fence = nullptr; }
+    if (g_fenceEvent) { CloseHandle(g_fenceEvent); g_fenceEvent = nullptr; }
+    if (g_rtvHeap) { g_rtvHeap->Release(); g_rtvHeap = nullptr; }
+    if (g_srvHeap) { g_srvHeap->Release(); g_srvHeap = nullptr; }
     g_device->Release();
     g_device = nullptr;
 }

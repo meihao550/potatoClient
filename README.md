@@ -1,5 +1,8 @@
 # PotatoClient — Minecraft Bedrock クライアント
 
+[![build](https://github.com/meihao550/potatoClient/actions/workflows/build.yml/badge.svg)](https://github.com/meihao550/potatoClient/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 日本語 | [English](README.en.md)
 
 Horion 風の内部 (DLL) クライアントを一から作って、チートクライアントの仕組みを学ぶためのプロジェクトです。
@@ -11,41 +14,68 @@ Horion 風の内部 (DLL) クライアントを一から作って、チートク
 ## How to use
 
 ### 1. 必要なもの
+どの方法でも必要なもの:
 - Windows 10 / 11 (x64)
 - Minecraft Bedrock **1.26.52**（GDK 版。Microsoft Store / Xbox アプリから入れたもの）
-- Visual Studio 2019 Build Tools（「C++ によるデスクトップ開発」をインストール）
-- Python 3（64bit 版）
-- git（ビルド時に MinHook / Dear ImGui を自動ダウンロードするため）
+
+ビルドの方法は 3 つあります。**自分の環境に合うものを 1 つ**選んでください。どれでも同じ `client.dll` と `injector.exe` ができます。
+
+| 方法 | 追加で必要なもの | 向いている人 |
+|---|---|---|
+| **A. Visual Studio**（おすすめ） | Visual Studio 2019 / 2022 / 2026（Community でも Build Tools でも可）+「C++ によるデスクトップ開発」 | コードを読んだり変えたりしたい人 |
+| **B. Docker** | Docker Desktop（Windows コンテナ モード） | Visual Studio を入れたくない人 |
+| **C. ビルドしない** | GitHub のアカウント | すぐ試したいだけの人 |
+
+Python は必要ありません（旧版の `injector\injector.py` を使いたい人だけ Python 3.10 以上の 64bit 版を入れてください）。
 
 ### 2. ビルド
-プロジェクトのフォルダ（`C:\minefolder`）でコマンドを実行します。
-```
-set CMAKE="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-%CMAKE% -S . -B build -G "Visual Studio 16 2019" -A x64
-%CMAKE% --build build --config Release
-```
-`build\Release\client.dll` ができれば成功です（`client.pdb` はクラッシュ解析用）。
-2 回目以降はソースを変えたら `--build` の行だけ実行すれば OK です。
 
-#### Docker でビルドする（任意）
-Visual Studio を入れずに DLL だけ作りたいときは、同梱の `Dockerfile` が使えます。Docker を **Windows コンテナ** モードにしておく必要があります（ゲームへの注入はコンテナではできません。ビルド専用です）。
+#### A. Visual Studio でビルドする
+1. Visual Studio をまだ入れていなければ、[Visual Studio の公式サイト](https://visualstudio.microsoft.com/ja/downloads/) から **Community** か **Build Tools** を入れます。インストーラーで **「C++ によるデスクトップ開発」** にチェックを入れてください（CMake も一緒に入ります）
+2. スタートメニューで **「Developer PowerShell for VS」**（または「Developer Command Prompt for VS」）を開きます。普通の PowerShell では `cmake` が見つかりません
+3. このリポジトリのフォルダ（`CMakeLists.txt` があるフォルダ）に移動して、次の 2 行を実行します
+   ```
+   cmake -S . -B build -A x64
+   cmake --build build --config Release
+   ```
+4. `build\Release\` に `client.dll` と `injector.exe` ができれば成功です（`client.pdb` はクラッシュ解析用）
+
+- 2 回目以降は、ソースを変えたら 2 行目（`--build`）だけ実行すれば OK です
+- 入っている中で一番新しい Visual Studio が自動で使われます。VS のバージョンを変えたときは `build` フォルダを消してから 1 行目からやり直してください
+
+#### B. Docker でビルドする
+Docker Desktop を **Windows コンテナ** モードにしてから、リポジトリのフォルダで実行します（コンテナの中でビルドするだけです。ゲームへの注入はコンテナからはできません）。
 ```
 docker build -t potatoclient-build .
 docker create --name potatoclient-out potatoclient-build
 docker cp potatoclient-out:C:\out .\out
 docker rm potatoclient-out
 ```
-`out\client.dll` ができます。Windows 10 では `--build-arg WINDOWS_VERSION=ltsc2019` を付けるか `--isolation=hyperv` でビルドしてください。
+`out\` に `client.dll` と `injector.exe` ができます。Windows 10 では `--build-arg WINDOWS_VERSION=ltsc2019` を付けるか `--isolation=hyperv` でビルドしてください。
+
+#### C. ビルドしないで使う
+GitHub が push のたびに自動でビルドしています。
+1. [Actions のページ](https://github.com/meihao550/potatoClient/actions/workflows/build.yml) を開き、一番上の緑のチェック（✓）が付いた実行を選ぶ
+2. 下の **Artifacts** にある `potatoclient` をダウンロードして展開する（GitHub へのログインが必要です）
+3. 中に `client.dll` と `injector.exe` が入っています
+
+#### ビルドでつまずいたら
+| 症状 | 対処 |
+|---|---|
+| `cmake` が見つからない / 認識されない | 普通の PowerShell を開いています。「Developer PowerShell for VS」から実行してください |
+| スタートメニューに「Developer PowerShell for VS」がない | Visual Studio Installer を開き、「変更」から「C++ によるデスクトップ開発」を追加 |
+| `generator does not match` / `Visual Studio 16 2019 could not find` | 前に別の設定で作った `build` フォルダが残っています。`build` フォルダを消して 1 行目からやり直す |
+| `git` が見つからない（ビルド中の FetchContent で失敗） | Developer PowerShell から実行するか、[Git for Windows](https://git-scm.com/download/win) を入れる |
 
 ### 3. インジェクト
 1. マイクラを起動し、**シングルプレイのワールドに入る**（Xray のブロック一覧はワールドに入ってから作られます）
-2. 別のウィンドウで次を実行
+2. `build\Release\injector.exe` をダブルクリックする（またはコマンドで実行）
    ```
-   python injector\injector.py
+   build\Release\injector.exe
    ```
-3. 開いたウィンドウの **Inject** ボタンを押す
-   - DLL のパスは `build\Release\client.dll` が初期値です。別の DLL を使うときは「参照...」で選びます
-4. 「Inject 成功!」と表示され、ゲームの横にコンソール窓が開いて `Injected!` が出れば成功
+   - 同じフォルダの `client.dll` を注入します。別の DLL を使うときは `injector.exe <DLL のパス>`
+   - Python がある人は、ボタンで操作できる旧版 `python injector\injector.py` も使えます
+3. 「Inject 成功!」と表示され、ゲームの横にコンソール窓が開いて `Injected!` が出れば成功
 
 ### 4. 操作
 | キー | 動作 |
@@ -57,9 +87,12 @@ docker rm potatoclient-out
 | End | アンロード（ゲームは続行、もう一度 Inject できる） |
 
 メニューの見方:
+- **タブ**（移動 / 表示 / プレイヤー）: モジュールの種類ごとに分かれています
 - **チェックボックス**: モジュールの ON/OFF
 - **「キー: X」ボタン**: 押してから好きなキーを押すとキー割り当てを変更。Esc を押すと割り当てなし
 - **「設定」**: 開くとモジュールごとの詳細設定が出る
+
+設定の保存: ON/OFF・キー割り当て・各設定は、メニューを閉じたときと End でアンロードしたときに `%LOCALAPPDATA%\PotatoClient\config.json` に保存され、次に注入したときに戻ります（実際の場所は `client.log` に出ます）。最初の状態に戻したいときは、このファイルを消してください。
 
 ### 5. Xray の使い方
 1. Insert でメニューを開き、Xray にチェック（または X キー）
@@ -133,9 +166,9 @@ docker rm potatoclient-out
 
 ## 仕組み
 
-### 1. インジェクション — `injector/injector.py`
+### 1. インジェクション — `injector/injector.cpp`（Python 版: `injector/injector.py`）
 `OpenProcess` → `VirtualAllocEx` → `WriteProcessMemory`(DLL パス) → `CreateRemoteThread(LoadLibraryW)`。
-ゲーム自身に `LoadLibraryW` を呼ばせて DLL を読み込ませる古典的な手法です。
+ゲーム自身に `LoadLibraryW` を呼ばせて DLL を読み込ませる古典的な手法です。C++ 版と Python 版は同じ手順です。
 DLL は毎回タイムスタンプ付きのコピーを注入するので、注入中でも再ビルドできます。
 
 ### 2. DLL のエントリ — `client/src/dllmain.cpp`
@@ -196,7 +229,7 @@ MinHook でフックします。ゲームが毎フレーム Present するたび
 ## ゲームが更新されたら (リバースエンジニアリングの手順)
 オフセットは `client/src/sdk/Offsets.h` に集約してあります。
 1. ゲームを起動してワールドに入る
-2. `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` — 暗号化された exe をメモリから復元して Ghidra/IDA で開ける形にする
+2. `python tools\dump_image.py dump\Minecraft.Windows.dump.exe` — 暗号化された exe をメモリから復元して Ghidra/IDA で開ける形にする（この手順だけ Python 3.10 以上が必要）
 3. [LeviLamina](https://github.com/LiteLDev/LeviLamina) の `src/mc/world/level/block/BlockType.h`, `Block.h` で構造体レイアウトを確認（BDS 用だがクライアントとほぼ同じ）
 4. 実メモリを読んで、名前などの既知の値がそのオフセットにあるか確かめてから `Offsets.h` を更新
 5. UP コマンド用: `LocalPlayer` / `ServerPlayer` の vtable シグネチャがまだ 1 か所だけに一致するか、vtable 番号 (`VIndex`) が合っているかを逆アセンブルで確認
@@ -204,7 +237,8 @@ MinHook でフックします。ゲームが毎フレーム Present するたび
 
 ## 構成
 ```
-injector/injector.py          ボタン 1 つの Inject
+injector/injector.cpp         Inject（ビルドすると build\Release\injector.exe）
+injector/injector.py          同じことをする Python 版（ボタン 1 つの GUI）
 tools/dump_image.py           実行中のゲームから exe をダンプ
 client/src/
   dllmain.cpp                 初期化スレッド / アンロード

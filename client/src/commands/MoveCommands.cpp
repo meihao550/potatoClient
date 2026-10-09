@@ -1,10 +1,13 @@
 #include "MoveCommands.h"
+#include "Args.h"
 #include "CommandManager.h"
+#include "Require.h"
+#include "core/Util.h"
+#include "sdk/Actor.h"
 #include "sdk/PlayerTick.h"
+#include <Windows.h>
 #include <cmath>
 #include <cstdio>
-#include <Windows.h>
-#include <cstdlib>
 #include <optional>
 
 /*
@@ -19,30 +22,12 @@
  */
 
 namespace {
-    std::optional<float> parseNumber(const std::string& text) {
-        char* end = nullptr;
-        const float value = std::strtof(text.c_str(), &end);
-        if (text.empty() || *end || !std::isfinite(value)) return std::nullopt;
-        return value;
-    }
-
     // "12.5" -> 12.5, "~" -> current, "~3" -> current + 3
     std::optional<float> parseCoordinate(const std::string& text, float current) {
-        if (text.empty() || text[0] != '~') return parseNumber(text);
+        if (text.empty() || text[0] != '~') return Args::parseFloat(text);
         if (text.size() == 1) return current;
-        const auto offset = parseNumber(text.substr(1));
+        const auto offset = Args::parseFloat(text.substr(1));
         return offset ? std::optional<float>(current + *offset) : std::nullopt;
-    }
-
-    bool inWorld() {
-        if (PlayerTick::ticking(PlayerTick::Side::Client)) return true;
-        CommandManager::print("ワールドに入ってから使ってください");
-        return false;
-    }
-
-    Vec3 feetOf(Actor& player) {
-        const StateVectorComponent* state = player.stateVector();
-        return { state->pos.x, player.aabbShape()->aabb.min.y, state->pos.z };
     }
 
     void report(const Vec3& to) {
@@ -50,21 +35,16 @@ namespace {
         snprintf(text, sizeof(text), "%.1f %.1f %.1f へ移動しました", to.x, to.y, to.z);
         CommandManager::print(text);
     }
-
-    bool ready(Actor& player) {
-        if (player.stateVector() && player.aabbShape() && player.rotation()) return true;
-        CommandManager::print("プレイヤーの情報が取れません (Offsets.h を確認)");
-        return false;
-    }
 }
 
-void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
+void reportIfPulledBack(Actor& /*player*/, bool server, const Vec3& feet) {
     if (server) return;
     const ULONGLONG checkAt = GetTickCount64() + 1000;
     PlayerTick::run(PlayerTick::Side::Client, [checkAt, feet](Actor& p) {
         if (GetTickCount64() < checkAt) return false;   // not yet: ask again next tick
-        if (!p.stateVector() || !p.aabbShape()) return true;
-        const Vec3 now = feetOf(p);
+        const auto refs = p.refs();
+        if (!refs) return true;
+        const Vec3 now = refs->feet();
         const float dx = now.x - feet.x, dy = now.y - feet.y, dz = now.z - feet.z;
         // falling after a vclip is fine; being moved sideways or back up/down a lot is not
         if (dx * dx + dz * dz > 1.0f || dy > 1.0f || dy < -30.0f)
@@ -74,13 +54,14 @@ void reportIfPulledBack(Actor& player, bool server, const Vec3& feet) {
 }
 
 void VClipCommand::execute(const std::vector<std::string>& args) {
-    const auto blocks = args.size() >= 2 ? parseNumber(args[1]) : std::nullopt;
-    if (!blocks) { CommandManager::print("使い方: vclip <ブロック数>  (例: vclip 10 / vclip -5)"); return; }
-    if (!inWorld()) return;
+    const auto blocks = args.size() >= 2 ? Args::parseFloat(args[1]) : std::nullopt;
+    if (!blocks) { CommandManager::printUsage(*this); return; }
+    if (!Require::inWorld()) return;
 
     PlayerTick::runOnSelf([dy = *blocks](Actor& player, bool server) {
-        if (!ready(player)) return;
-        Vec3 to = feetOf(player);
+        const auto refs = Require::playerRefs(player);
+        if (!refs) return;
+        Vec3 to = refs->feet();
         to.y += dy;
         player.moveFeetTo(to, server);
         report(to);
@@ -89,14 +70,15 @@ void VClipCommand::execute(const std::vector<std::string>& args) {
 }
 
 void HClipCommand::execute(const std::vector<std::string>& args) {
-    const auto blocks = args.size() >= 2 ? parseNumber(args[1]) : std::nullopt;
-    if (!blocks) { CommandManager::print("使い方: hclip <ブロック数>  (例: hclip 5)"); return; }
-    if (!inWorld()) return;
+    const auto blocks = args.size() >= 2 ? Args::parseFloat(args[1]) : std::nullopt;
+    if (!blocks) { CommandManager::printUsage(*this); return; }
+    if (!Require::inWorld()) return;
 
     PlayerTick::runOnSelf([distance = *blocks](Actor& player, bool server) {
-        if (!ready(player)) return;
-        const float yaw = player.rotation()->yaw * 3.14159265f / 180.0f;
-        Vec3 to = feetOf(player);
+        const auto refs = Require::playerRefs(player);
+        if (!refs) return;
+        const float yaw = refs->rotation.yaw * Util::kDegToRad;
+        Vec3 to = refs->feet();
         to.x += -std::sin(yaw) * distance;   // yaw 0 = +Z, yaw -90 = +X
         to.z += std::cos(yaw) * distance;
         player.moveFeetTo(to, server);
@@ -106,12 +88,13 @@ void HClipCommand::execute(const std::vector<std::string>& args) {
 }
 
 void TpCommand::execute(const std::vector<std::string>& args) {
-    if (args.size() != 4) { CommandManager::print("使い方: tp <x> <y> <z>  (~ で相対。例: tp ~ ~20 ~)"); return; }
-    if (!inWorld()) return;
+    if (args.size() != 4) { CommandManager::printUsage(*this); return; }
+    if (!Require::inWorld()) return;
 
     PlayerTick::runOnSelf([args](Actor& player, bool server) {
-        if (!ready(player)) return;
-        const Vec3 from = feetOf(player);
+        const auto refs = Require::playerRefs(player);
+        if (!refs) return;
+        const Vec3 from = refs->feet();
         const auto x = parseCoordinate(args[1], from.x);
         const auto y = parseCoordinate(args[2], from.y);
         const auto z = parseCoordinate(args[3], from.z);

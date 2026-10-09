@@ -2,11 +2,13 @@
 #include <d3d11.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
+#include <atomic>
 
 // Each backend draws ImGui on top of the game's back buffer.
 // All functions run on the game's render thread (inside Present).
 namespace Dx12Backend {
-    inline ID3D12CommandQueue* commandQueue = nullptr;  // captured from ExecuteCommandLists
+    // Captured from ExecuteCommandLists (any game thread), used on the render thread
+    inline std::atomic<ID3D12CommandQueue*> commandQueue = nullptr;
     bool init(IDXGISwapChain3* swapChain, ID3D12Device* device);
     void render(IDXGISwapChain3* swapChain);
     void releaseBuffers();   // before ResizeBuffers

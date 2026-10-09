@@ -1,4 +1,5 @@
 #include "Aimbox.h"
+#include "core/Util.h"
 #include "sdk/ActorList.h"
 #include <Windows.h>
 #include <imgui.h>
@@ -13,7 +14,7 @@
  */
 
 namespace {
-    constexpr float kDegToRad = 3.14159265f / 180.0f;
+    using Util::kDegToRad;
 
     Vec3 sub(Vec3 a, Vec3 b) { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
     float dot(Vec3 a, Vec3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
@@ -50,23 +51,24 @@ namespace {
 }
 
 void Aimbox::onTick(Actor& player) {
-    StateVectorComponent* me = player.stateVector();
-    ActorRotationComponent* rot = player.rotation();
-    if (!me || !rot) return;
+    const auto me = player.refs();
+    if (!me) return;
 
     Snapshot snap;
     snap.time = GetTickCount64();
-    snap.eye = me->pos;
-    snap.yaw = rot->yaw;
-    snap.pitch = rot->pitch;
+    snap.eye = me->state.pos;
+    snap.yaw = me->rotation.yaw;
+    snap.pitch = me->rotation.pitch;
 
-    for (Actor* a : ActorList::get(player)) {
+    const float range = m_range;
+    ActorList::get(player, m_actors);
+    for (Actor* a : m_actors) {
         if (!a || a == &player) continue;
         AABBShapeComponent* shape = a->aabbShape();
         if (!shape) continue;
         if (m_skipSmall && shape->width < 0.3f) continue;
-        const Vec3 d = sub(shape->aabb.min, me->pos);
-        if (dot(d, d) > m_range * m_range) continue;
+        const Vec3 d = sub(shape->aabb.min, me->state.pos);
+        if (dot(d, d) > range * range) continue;
         snap.boxes.push_back(shape->aabb);
     }
 
@@ -83,7 +85,7 @@ void Aimbox::onRender() {
     if (GetTickCount64() - snap.time > 500) return;   // paused / left the world
 
     const Camera cam = makeCamera(snap.eye, snap.yaw, snap.pitch, m_fov, ImGui::GetIO().DisplaySize);
-    const ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(m_color[0], m_color[1], m_color[2], m_color[3]));
+    const ImU32 color = m_color.packed();
     ImDrawList* draw = ImGui::GetBackgroundDrawList();
 
     static const int edges[12][2] = {
@@ -109,12 +111,4 @@ void Aimbox::onRender() {
 void Aimbox::onDisable() {
     std::lock_guard lock(m_mutex);
     m_snap = {};
-}
-
-void Aimbox::renderSettings() {
-    ImGui::SliderFloat("FOV", &m_fov, 30.0f, 110.0f, "%.0f");
-    ImGui::SliderFloat("距離", &m_range, 8.0f, 128.0f, "%.0f ブロック");
-    ImGui::Checkbox("小さいもの (アイテム・経験値) を除く", &m_skipSmall);
-    ImGui::ColorEdit4("色", m_color);
-    ImGui::TextDisabled("箱がずれるときは FOV をゲームの設定に合わせる");
 }

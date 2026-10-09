@@ -2,6 +2,7 @@
 #include "core/Logger.h"
 #include "sdk/BlockRegistry.h"
 #include <imgui.h>
+#include <nlohmann/json.hpp>
 #include <cstring>
 
 /*
@@ -27,13 +28,12 @@
  */
 
 namespace {
-    constexpr uint8_t kOpaqueFullBlock = 1 << 4;
-    constexpr uint8_t kIgnoreForInsideCube = 1 << 3;
+    namespace Flags2 = Offsets::BlockType::Flags2;
     constexpr const char* kRebuildHint = "設定→ビデオの「スムーズライティング」を一度切り替えると全チャンクに反映されます";
 }
 
 Xray::Xray()
-    : Module("Xray", "選んだ鉱石以外のブロックを透明にする", 'X'),
+    : Module("Xray", "選んだ鉱石以外のブロックを透明にする", Category::Render, 'X'),
       m_groups{
           { "ダイヤモンド",     { "diamond_ore" },                    true },
           { "エメラルド",       { "emerald_ore" },                    true },
@@ -49,7 +49,9 @@ Xray::Xray()
           { "チェスト",         { "chest", "barrel" },                true },
           { "溶岩",             { "lava" },                           true },
           { "水",               { "water" },                          false },
-      } {}
+      } {
+    addSettings({ &m_letLightThrough });
+}
 
 Xray::Original Xray::capture(BlockType* b, const std::string& name) {
     Original o{ name, b->translucency(), b->renderLayer(), b->flags2(), b->lightBlock(), {} };
@@ -76,7 +78,7 @@ void Xray::restore(BlockType* b, const Original& o) {
 void Xray::hide(BlockType* b, const Original& o) const {
     // BlockType: drawn on the barrier layer, no longer a full opaque cube
     b->renderLayer() = Offsets::RenderLayer::Barrier;
-    b->flags2() = static_cast<uint8_t>((o.flags2 & ~kOpaqueFullBlock) | kIgnoreForInsideCube);
+    b->flags2() = static_cast<uint8_t>((o.flags2 & ~Flags2::isOpaqueFullBlock) | Flags2::ignoreForInsideCube);
     b->translucency() = 1.0f;
     b->lightBlock() = m_letLightThrough ? 0 : o.lightBlock;
     // Each Block permutation caches the culling data; make it match minecraft:barrier
@@ -157,9 +159,11 @@ void Xray::onDisable() {
 }
 
 void Xray::renderSettings() {
+    // The settings below are read by apply(), which can run on another thread (key bind -> onEnable)
+    std::lock_guard lock(m_mutex);
     bool changed = false;
     if (!m_status.empty()) ImGui::TextWrapped("%s", m_status.c_str());
-    changed |= ImGui::Checkbox("光を通す (鉱石が暗くならない)", &m_letLightThrough);
+    changed |= m_letLightThrough.render();
 
     ImGui::SeparatorText("表示する鉱石");
     for (size_t i = 0; i < m_groups.size(); ++i) {
@@ -191,8 +195,30 @@ void Xray::renderSettings() {
         changed = true;
     }
 
-    if (changed && isEnabled()) {
-        std::lock_guard lock(m_mutex);
-        apply();
+    if (changed && isEnabled()) apply();
+}
+
+// Config: which ore groups are shown (keyed by their first pattern, which never changes)
+// and the custom block list
+void Xray::saveExtra(nlohmann::json& out) {
+    std::lock_guard lock(m_mutex);
+    nlohmann::json ores = nlohmann::json::object();
+    for (const auto& g : m_groups) ores[g.patterns.front()] = g.visible;
+    out["ores"] = ores;
+    out["custom"] = m_custom;
+}
+
+void Xray::loadExtra(const nlohmann::json& in) {
+    std::lock_guard lock(m_mutex);
+    if (auto ores = in.find("ores"); ores != in.end() && ores->is_object()) {
+        for (auto& g : m_groups) {
+            auto v = ores->find(g.patterns.front());
+            if (v != ores->end() && v->is_boolean()) g.visible = v->get<bool>();
+        }
+    }
+    if (auto custom = in.find("custom"); custom != in.end() && custom->is_array()) {
+        m_custom.clear();
+        for (const auto& c : *custom)
+            if (c.is_string() && !c.get<std::string>().empty()) m_custom.push_back(c.get<std::string>());
     }
 }

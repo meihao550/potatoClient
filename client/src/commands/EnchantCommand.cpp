@@ -1,11 +1,13 @@
 #include "EnchantCommand.h"
+#include "Args.h"
 #include "CommandManager.h"
+#include "Require.h"
+#include "core/Util.h"
 #include "sdk/CommandSender.h"
 #include "sdk/Enchant.h"
 #include "sdk/PlayerTick.h"
-#include <cctype>
 #include <cstdio>
-#include <cstdlib>
+#include <memory>
 #include <utility>
 
 /*
@@ -25,11 +27,7 @@
 
 namespace {
     using Wanted = std::vector<std::pair<uint8_t, int>>;   // (enchant id, level)
-
-    std::string toLower(std::string s) {
-        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return s;
-    }
+    constexpr const char* kHoldSomething = "エンチャントしたい武器・防具を手に持ってください";
 
     const Enchant::Info* byId(uint8_t id) {
         for (const auto& e : Enchant::all())
@@ -49,28 +47,18 @@ namespace {
         CommandManager::print(text);
     }
 
-    // Server thread: enchant our ServerPlayer's held item, then mirror it on the client
-    void enchantHeld(Actor& server, const Wanted& wanted) {
-        ItemStack* stack = server.getCarriedItem();
-        if (!stack || !stack->item()) {
-            CommandManager::print("エンチャントしたい武器・防具を手に持ってください");
-            return;
-        }
-
+    // Server thread: enchant our ServerPlayer's held item. Returns what was applied (empty = nothing).
+    Wanted enchantHeld(Actor& server, const Wanted& wanted) {
         Wanted applied;
+        ItemStack* stack = Require::heldItem(server, kHoldSomething);
+        if (!stack) return applied;
+
         for (const auto& [id, level] : wanted)
             if (Enchant::apply(*stack, id, level)) applied.push_back({ id, level });
         if (applied.empty()) {
             CommandManager::print("このアイテムには付けられません (種類が合わない・他のエンチャントと両立しない)");
-            return;
+            return applied;
         }
-
-        PlayerTick::run(PlayerTick::Side::Client, [applied](Actor& local) {
-            ItemStack* copy = local.getCarriedItem();
-            if (copy && copy->item())
-                for (const auto& [id, level] : applied) Enchant::apply(*copy, id, level);
-            return true;
-        });
 
         std::string text = std::string(stack->name()) + " に付けました:";
         for (const auto& [id, level] : applied) {
@@ -79,15 +67,20 @@ namespace {
             text += part;
         }
         CommandManager::print(text);
+        return applied;
+    }
+
+    // Client thread: the same enchants on the client's copy of the held item, so the hotbar shows them
+    void applyToCopy(Actor& local, const Wanted& applied) {
+        ItemStack* copy = local.getCarriedItem();
+        if (copy && copy->item())
+            for (const auto& [id, level] : applied) Enchant::apply(*copy, id, level);
     }
 
     // Client thread, remote server: let the server run the vanilla /enchant for us
     void enchantViaServer(Actor& local, const Wanted& wanted) {
-        ItemStack* stack = local.getCarriedItem();
-        if (!stack || !stack->item()) {
-            CommandManager::print("エンチャントしたい武器・防具を手に持ってください");
-            return;
-        }
+        ItemStack* stack = Require::heldItem(local, kHoldSomething);
+        if (!stack) return;
 
         std::string text = std::string(stack->name()) + " に送信:";
         int sent = 0;
@@ -114,17 +107,19 @@ namespace {
 
 void EnchantCommand::execute(const std::vector<std::string>& args) {
     using PlayerTick::Side;
-    if (args.size() < 2 || toLower(args[1]) == "list") {
+    if (args.size() < 2 || Util::toLower(args[1]) == "list") {
         printList();
         return;
     }
-    if (!PlayerTick::ticking(Side::Client)) {
-        CommandManager::print("ワールドに入ってから使ってください");
+    if (!Require::inWorld()) return;
+    // Both paths need applyEnchant: directly in single-player, to test which enchants fit before sending otherwise
+    if (!Enchant::available()) {
+        CommandManager::print("エンチャントの関数が見つかりません (シグネチャ未検出: client.log を確認)");
         return;
     }
 
     Wanted wanted;
-    if (toLower(args[1]) == "all") {
+    if (Util::toLower(args[1]) == "all") {
         for (uint8_t id : Enchant::bestSet()) wanted.push_back({ id, byId(id)->maxLevel });
     } else {
         const Enchant::Info* info = Enchant::find(args[1]);
@@ -132,14 +127,22 @@ void EnchantCommand::execute(const std::vector<std::string>& args) {
             CommandManager::print("不明なエンチャント: " + args[1] + "  (enchant list で一覧)");
             return;
         }
-        int level = args.size() > 2 ? std::atoi(args[2].c_str()) : info->maxLevel;
+        int level = info->maxLevel;
+        if (args.size() > 2) {
+            const auto parsed = Args::parseInt(args[2]);
+            if (!parsed) { CommandManager::printUsage(*this); return; }
+            level = *parsed;
+        }
         if (level < 1) level = 1;
         if (level > 255) level = 255;
         wanted.push_back({ info->id, level });
     }
 
     if (PlayerTick::ticking(Side::Server)) {   // the world runs on this PC
-        PlayerTick::runOnOwnServerPlayer([wanted](Actor& server) { enchantHeld(server, wanted); });
+        auto applied = std::make_shared<Wanted>();
+        PlayerTick::runOnServerThenClient(
+            [wanted, applied](Actor& server) { *applied = enchantHeld(server, wanted); return !applied->empty(); },
+            [applied](Actor& local) { applyToCopy(local, *applied); });
         return;
     }
     if (!CommandSender::available()) {

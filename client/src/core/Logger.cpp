@@ -15,7 +15,11 @@ namespace {
 
 void Logger::init() {
     AllocConsole();
-    SetConsoleTitleW(L"LearnClient console");
+    SetConsoleTitleW(L"PotatoClient console");
+    // Closing a console kills the process it belongs to - here, the game. Grey out the X.
+    if (HWND console = GetConsoleWindow())
+        if (HMENU menu = GetSystemMenu(console, FALSE)) DeleteMenu(menu, SC_CLOSE, MF_BYCOMMAND);
+    SetConsoleCtrlHandler(nullptr, TRUE);   // same for Ctrl+C in the console window
     freopen_s(&g_console, "CONOUT$", "w", stdout);
 
     // client.log next to client.dll

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(LearnClient LANGUAGES C CXX)
+project(PotatoClient LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,7 +13,11 @@ FetchContent_Declare(minhook
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.91.9)
-FetchContent_MakeAvailable(minhook)
+# JSON for the config file (v3.12.0+ also configures with CMake 4)
+FetchContent_Declare(json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(minhook json)
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)
     FetchContent_Populate(imgui)
@@ -33,7 +37,13 @@ file(GLOB_RECURSE CLIENT_SOURCES CONFIGURE_DEPENDS client/src/*.cpp)
 add_library(client SHARED ${CLIENT_SOURCES})
 target_include_directories(client PRIVATE client/src)
 target_compile_definitions(client PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-target_compile_options(client PRIVATE /utf-8 /W3 /Zi)
+target_compile_options(client PRIVATE /utf-8 /W4 /Zi)
 # PDB for Release too, so crash offsets in the Windows event log can be mapped to source lines
 target_link_options(client PRIVATE /DEBUG /OPT:REF /OPT:ICF)
-target_link_libraries(client PRIVATE minhook imgui d3d11 d3d12 dxgi)
+target_link_libraries(client PRIVATE minhook imgui nlohmann_json::nlohmann_json d3d11 d3d12 dxgi shell32 ole32)
+
+# Injector: ends up next to client.dll (build\Release\injector.exe), no Python needed
+add_executable(injector injector/injector.cpp)
+target_compile_definitions(injector PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+target_compile_options(injector PRIVATE /utf-8 /W4)
+target_link_libraries(injector PRIVATE advapi32)

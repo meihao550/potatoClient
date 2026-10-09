@@ -1,6 +1,6 @@
 #include "Enchant.h"
 #include "core/Logger.h"
-#include <cctype>
+#include "core/Util.h"
 
 /*
  * Enchanting with the game's own code
@@ -82,25 +82,21 @@ namespace {
         33, 35,                      // multishot, quick charge
         41,                          // lunge
     };
-
-    std::string toLower(std::string s) {
-        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return s;
-    }
 }
 
 bool Enchant::init() {
-    g_applyEnchant = reinterpret_cast<ApplyEnchant_t>(Memory::findSig(Offsets::Sig::applyEnchant));
-    LOG("EnchantUtils::applyEnchant at exe+%#llx", g_applyEnchant
-        ? static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(g_applyEnchant) - Memory::moduleBase()) : 0ull);
+    g_applyEnchant = reinterpret_cast<ApplyEnchant_t>(
+        Memory::scanOrLog("EnchantUtils::applyEnchant", Offsets::Sig::applyEnchant));
     return g_applyEnchant != nullptr;
 }
+
+bool Enchant::available() { return g_applyEnchant != nullptr; }
 
 const std::vector<Enchant::Info>& Enchant::all() { return g_enchants; }
 const std::vector<uint8_t>& Enchant::bestSet() { return g_bestSet; }
 
 const Enchant::Info* Enchant::find(const std::string& name) {
-    const std::string key = toLower(name);
+    const std::string key = Util::toLower(name);
     for (const Info& e : g_enchants)
         if (key == e.name || name == e.japanese) return &e;
     return nullptr;

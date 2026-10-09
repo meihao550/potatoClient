@@ -1,5 +1,7 @@
 #include "PlayerTick.h"
+#include "Actor.h"
 #include "core/Hooks.h"
+#include "core/InFlight.h"
 #include "core/Logger.h"
 #include <Windows.h>
 #include <atomic>
@@ -67,26 +69,28 @@ namespace {
     Side& get(PlayerTick::Side side) { return side == PlayerTick::Side::Client ? g_client : g_server; }
 
     void hkClientTick(Actor* self) {
+        InFlight::Guard guard;   // see core/InFlight.h
         g_client.original(self);
         g_client.onTick(self);
         if (auto listener = g_clientListener.load(); listener && *reinterpret_cast<void***>(self) == g_client.vtable)
             listener(*self);
     }
-    void hkServerTick(Actor* self) { g_server.original(self); g_server.onTick(self); }
+    void hkServerTick(Actor* self) {
+        InFlight::Guard guard;   // see core/InFlight.h
+        g_server.original(self);
+        g_server.onTick(self);
+    }
 
-    bool install(Side& side, void* detour) {
-        const uintptr_t hit = Memory::findSig(side.signature);
-        if (!hit) {
-            LOG("%s vtable signature not found", side.name);
-            return false;
-        }
+    bool install(Side& side, NormalTick_t detour) {
+        char name[64];
+        snprintf(name, sizeof(name), "%s vtable reference", side.name);
+        const uintptr_t hit = Memory::scanOrLog(name, side.signature);
+        if (!hit) return false;
         side.vtable = reinterpret_cast<void**>(Memory::resolveRel32(hit, 3, 7));
-        LOG("%s vtable at exe+%#llx", side.name,
-            static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(side.vtable) - Memory::moduleBase()));
+        LOG("%s vtable at exe+%#llx", side.name, Memory::rva(side.vtable));
         char hookName[64];
         snprintf(hookName, sizeof(hookName), "%s::normalTick", side.name);
-        return Hooks::create(hookName, side.vtable[Offsets::Actor::VIndex::normalTick], detour,
-                             reinterpret_cast<void**>(&side.original));
+        return Hooks::create(hookName, side.vtable[Offsets::Actor::VIndex::normalTick], detour, side.original);
     }
 }
 
@@ -95,6 +99,8 @@ bool PlayerTick::init() {
     const bool server = install(g_server, &hkServerTick);
     return client && server;
 }
+
+bool PlayerTick::hooked(Side side) { return get(side).original != nullptr; }
 
 bool PlayerTick::ticking(Side side) {
     const auto& s = get(side);
@@ -121,6 +127,13 @@ void PlayerTick::runOnOwnServerPlayer(std::function<void(Actor&)> fn) {
             return true;
         });
         return true;
+    });
+}
+
+void PlayerTick::runOnServerThenClient(std::function<bool(Actor&)> serverFn, std::function<void(Actor&)> clientFn) {
+    runOnOwnServerPlayer([serverFn = std::move(serverFn), clientFn = std::move(clientFn)](Actor& server) {
+        if (!serverFn(server)) return;
+        run(Side::Client, [clientFn](Actor& local) { clientFn(local); return true; });
     });
 }
 

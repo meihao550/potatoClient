@@ -1,12 +1,7 @@
 #pragma once
-#include <Windows.h>
 
+// Whether the menu / command bar are open lives in core/InputFocus.h.
 namespace Menu {
-    inline bool open = false;          // module menu (Insert)
-    inline bool commandOpen = false;   // command bar (Home)
-    // While true, keyboard/mouse go to our overlay instead of the game
-    inline bool capturesInput() { return open || commandOpen; }
-
     void loadFonts();     // call once after ImGui::CreateContext
     void render();        // call between ImGui::NewFrame / ImGui::Render
     // Returns true if the key was consumed by the keybind editor.

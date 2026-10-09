@@ -1,5 +1,6 @@
 #include "MoveInput.h"
-#include "gui/Menu.h"
+#include "core/InputFocus.h"
+#include "core/Util.h"
 #include <Windows.h>
 #include <cmath>
 
@@ -8,7 +9,7 @@ namespace {
 }
 
 bool MoveInput::gameHasFocus() {
-    if (Menu::capturesInput()) return false;
+    if (InputFocus::overlayHasInput()) return false;
     DWORD pid = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &pid);
     return pid == GetCurrentProcessId();
@@ -21,7 +22,7 @@ bool MoveInput::direction(float yawDegrees, float& x, float& z) {
     if (forward == 0 && left == 0) return false;
 
     // yaw 0 = facing +Z, yaw -90 = facing +X.  forward = (-sin, cos), left = (cos, sin)
-    const float yaw = yawDegrees * 3.14159265f / 180.0f;
+    const float yaw = yawDegrees * Util::kDegToRad;
     const float s = std::sin(yaw), c = std::cos(yaw);
     x = forward * -s + left * c;
     z = forward * c + left * s;

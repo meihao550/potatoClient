@@ -3,8 +3,14 @@ name: build
 on:
   push:
     branches: [main, dev]
+    # Pushing a tag like v1.0.0 also publishes the installer as a GitHub Release
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+
+# contents: write is needed for gh release create
+permissions:
+  contents: write
 
 jobs:
   windows-msvc:
@@ -30,10 +36,22 @@ jobs:
         shell: pwsh
         run: |
           choco install innosetup -y --no-progress
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer/PotatoClient.iss
+          # Tag v1.2.3 -> installer version 1.2.3 (other builds stay 0.0.0)
+          $version = if ("${{ github.ref }}" -like "refs/tags/v*") { "${{ github.ref_name }}".Substring(1) } else { "0.0.0" }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" installer/PotatoClient.iss
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@v4
         with:
           name: potatoclient-setup
           path: installer/Output/PotatoClient-Setup.exe
+
+      # Only for tag pushes: a Release can be downloaded without a GitHub login and never expires
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" installer/Output/PotatoClient-Setup.exe --title "PotatoClient ${{ github.ref_name }}" --generate-notes
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

@@ -2,15 +2,19 @@
 ; Build with installer\build-installer.ps1, or: iscc installer\PotatoClient.iss
 ; Inputs: build\Release\client.dll and build\Release\injector.exe
 
+; AppVersion = the release (CI passes /DAppVersion=1.2.3 from the v1.2.3 tag), GameVersion = the supported game.
+; Running a newer Setup over an install updates it in place (same AppId)
 #ifndef AppVersion
-  #define AppVersion "1.26.52"
+  #define AppVersion "0.0.0"
 #endif
+#define GameVersion "1.26.52"
 
 [Setup]
 AppId={{7E3B6A52-4C1D-4F0B-9A8E-5D2C1B0A9F31}
 AppName=PotatoClient
 AppVersion={#AppVersion}
-AppVerName=PotatoClient (Minecraft Bedrock {#AppVersion})
+AppVerName=PotatoClient {#AppVersion} (Minecraft Bedrock {#GameVersion})
+VersionInfoVersion={#AppVersion}
 AppPublisher=PotatoClient contributors
 AppPublisherURL=https://github.com/meihao550/potatoClient
 ; Per-user install: injector.exe writes client_loaded_*.dll next to client.dll, so the folder must be writable

@@ -16,11 +16,13 @@ New to the code? Start with **[docs/READING_THE_CODE.md](docs/READING_THE_CODE.m
 ## How to use
 
 ### 0. Install with the installer (no build needed)
-1. On the [Actions page](https://github.com/meihao550/potatoClient/actions/workflows/build.yml), open the latest successful run and download the **`potatoclient-setup`** artifact (requires a GitHub login), then unzip it
+1. Download **`PotatoClient-Setup.exe`** from the [Releases page](https://github.com/meihao550/potatoClient/releases/latest) (no login needed)
+   - For the latest development build, open the latest successful run on the [Actions page](https://github.com/meihao550/potatoClient/actions/workflows/build.yml) and download the `potatoclient-setup` artifact (requires a GitHub login), then unzip it
 2. Run `PotatoClient-Setup.exe` (no admin rights needed; installs to `%LOCALAPPDATA%\Programs\PotatoClient`)
    - The exe is unsigned, so SmartScreen or your antivirus may warn about it. Only use builds from this repository
 3. Start Minecraft, **enter a single-player world**, then run **"PotatoClient Injector"** from the Start menu
 4. See "4. Controls" below. Uninstall from Settings > Apps
+5. **Updating**: download the new `PotatoClient-Setup.exe` from Releases and run it (no need to uninstall; it installs over the old one). If it's injected, press End to unload, then run the Injector again
 
 To build the installer yourself, install Visual Studio and [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`), then run the command below. It produces `installer\Output\PotatoClient-Setup.exe`.
 ```
@@ -153,6 +155,7 @@ In single-player, the built-in server's ServerPlayer is moved through the same p
 
 `enchant` — enchants the weapon or armor in your hand (`enchant sharpness` / `enchant all` / `enchant list`)
 - **Also works on multiplayer servers (operator permission required)**: it sends `/enchant @s <name> <level>` to the server the same way chat does. Only enchantments that can be applied to the held item are sent, so `enchant all` doesn't flood you with errors. Levels go up to the maximum the server's `/enchant` allows
+- **For a friend**: when you host the world, `enchant <name> <level> friend` enchants the held item of the closest friend, up to level 255
 - Full manual: **[docs/ENCHANT.md](docs/ENCHANT.md)** (Japanese only)
 
 ### 6.6 Inventory

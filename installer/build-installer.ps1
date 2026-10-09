@@ -1,11 +1,12 @@
-# Builds client.dll + injector.exe and packs them into installer\Output\PotatoClient-Setup.exe
+﻿# Builds client.dll + injector.exe and packs them into installer\Output\PotatoClient-Setup.exe
 #
 #   powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
 #   powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1 -SkipBuild   # reuse build\Release
+#   powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1 -Version 1.2.3   # version shown in Settings > Apps
 #
 # Needs: Visual Studio 2019+ with "Desktop development with C++", and Inno Setup 6
 #   (winget install JRSoftware.InnoSetup)
-param([switch]$SkipBuild)
+param([switch]$SkipBuild, [string]$Version = "0.0.0")
 # Not "Stop": PowerShell 5.1 turns cmake's stderr warnings into terminating errors.
 # Native failures are checked through $LASTEXITCODE instead.
 $ErrorActionPreference = "Continue"
@@ -45,6 +46,6 @@ $iscc = Find-Exe "iscc" @(
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe")
 if (-not $iscc) { throw "Inno Setup 6 が見つかりません: winget install JRSoftware.InnoSetup" }
 
-& $iscc "installer\PotatoClient.iss"
+& $iscc "/DAppVersion=$Version" "installer\PotatoClient.iss"
 if ($LASTEXITCODE) { throw "Inno Setup のコンパイルに失敗しました" }
 Write-Host "`n完成: $root\installer\Output\PotatoClient-Setup.exe" -ForegroundColor Green

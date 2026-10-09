@@ -2,3 +2,4 @@ build/
 dump/
 __pycache__/
 out/
+installer/Output/

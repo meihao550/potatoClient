@@ -15,6 +15,18 @@ New to the code? Start with **[docs/READING_THE_CODE.md](docs/READING_THE_CODE.m
 
 ## How to use
 
+### 0. Install with the installer (no build needed)
+1. On the [Actions page](https://github.com/meihao550/potatoClient/actions/workflows/build.yml), open the latest successful run and download the **`potatoclient-setup`** artifact (requires a GitHub login), then unzip it
+2. Run `PotatoClient-Setup.exe` (no admin rights needed; installs to `%LOCALAPPDATA%\Programs\PotatoClient`)
+   - The exe is unsigned, so SmartScreen or your antivirus may warn about it. Only use builds from this repository
+3. Start Minecraft, **enter a single-player world**, then run **"PotatoClient Injector"** from the Start menu
+4. See "4. Controls" below. Uninstall from Settings > Apps
+
+To build the installer yourself, install Visual Studio and [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`), then run the command below. It produces `installer\Output\PotatoClient-Setup.exe`.
+```
+powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
+```
+
 ### 1. Requirements
 Needed whichever way you build:
 - Windows 10 / 11 (x64)

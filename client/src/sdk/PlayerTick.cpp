@@ -4,8 +4,11 @@
 #include "core/InFlight.h"
 #include "core/Logger.h"
 #include <Windows.h>
+#include <algorithm>
 #include <atomic>
+#include <memory>
 #include <mutex>
+#include <utility>
 #include <vector>
 
 /*
@@ -113,21 +116,66 @@ void PlayerTick::run(Side side, std::function<bool(Actor&)> fn) {
     s.tasks.push_back({ std::move(fn), GetTickCount64() + 2000 });
 }
 
-void PlayerTick::runOnOwnServerPlayer(std::function<void(Actor&)> fn) {
-    run(Side::Client, [fn = std::move(fn)](Actor& local) {
-        StateVectorComponent* state = local.stateVector();
-        if (!state) return true;
-        const Vec3 pos = state->pos;
-        run(Side::Server, [fn, pos](Actor& server) {
-            StateVectorComponent* s = server.stateVector();
-            if (!s) return false;
-            const float dx = s->pos.x - pos.x, dz = s->pos.z - pos.z;
-            if (dx * dx + dz * dz > 8.0f * 8.0f) return false;   // a LAN guest, not us
-            fn(server);
+namespace {
+    // (player, squared distance to our LocalPlayer), measured when the player ticked
+    using SeenPlayer = std::pair<Actor*, float>;
+    using Seen = std::vector<SeenPlayer>;
+    using Pick = Actor* (*)(Seen& seen);
+
+    bool closerFirst(const SeenPlayer& a, const SeenPlayer& b) { return a.second < b.second; }
+    bool contains(const Seen& seen, const Actor* player) {
+        for (const SeenPlayer& s : seen)
+            if (s.first == player) return true;
+        return false;
+    }
+
+    // Server thread: every ServerPlayer ticks once per round, so a task that sees the same player
+    // twice has seen them all. pick then chooses one by distance to our LocalPlayer, and fn runs
+    // during that player's next tick (never through a stored pointer: they may have left meanwhile).
+    // fn gets nullptr when pick finds nobody.
+    void runOnPicked(Pick pick, std::function<void(Actor*)> fn) {
+        PlayerTick::run(PlayerTick::Side::Client, [pick, fn = std::move(fn)](Actor& local) {
+            StateVectorComponent* state = local.stateVector();
+            if (!state) return true;
+            const Vec3 ours = state->pos;
+            struct Round { Seen seen; Actor* target = nullptr; bool picked = false; };
+            auto round = std::make_shared<Round>();
+            PlayerTick::run(PlayerTick::Side::Server, [pick, fn, ours, round](Actor& server) {
+                if (!round->picked) {
+                    auto& seen = round->seen;
+                    if (!contains(seen, &server)) {
+                        StateVectorComponent* s = server.stateVector();
+                        if (s) {
+                            const float dx = s->pos.x - ours.x, dy = s->pos.y - ours.y, dz = s->pos.z - ours.z;
+                            seen.push_back({ &server, dx * dx + dy * dy + dz * dz });
+                        }
+                        return false;
+                    }
+                    round->picked = true;
+                    std::sort(seen.begin(), seen.end(), closerFirst);
+                    round->target = pick(seen);
+                    if (!round->target) { fn(nullptr); return true; }
+                }
+                if (&server != round->target) return false;
+                fn(&server);
+                return true;
+            });
             return true;
         });
-        return true;
-    });
+    }
+}
+
+void PlayerTick::runOnOwnServerPlayer(std::function<void(Actor&)> fn) {
+    // Ours is the one standing where the LocalPlayer is: the closest (a guest can stand right next to us)
+    runOnPicked([](Seen& seen) { return seen.empty() ? nullptr : seen[0].first; },
+                [fn = std::move(fn)](Actor* server) { if (server) fn(*server); });
+}
+
+void PlayerTick::runOnNearestGuest(std::function<void(Actor* guest)> fn) {
+    runOnPicked([](Seen& seen) {
+        constexpr float range = 16.0f;
+        return seen.size() >= 2 && seen[1].second <= range * range ? seen[1].first : nullptr;
+    }, std::move(fn));
 }
 
 void PlayerTick::runOnServerThenClient(std::function<bool(Actor&)> serverFn, std::function<void(Actor&)> clientFn) {

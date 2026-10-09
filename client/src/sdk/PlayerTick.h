@@ -24,6 +24,10 @@ namespace PlayerTick {
     // LocalPlayer is (other ServerPlayers are LAN guests). Single-player worlds only.
     void runOnOwnServerPlayer(std::function<void(Actor& server)> fn);
 
+    // Runs fn on the server thread with the LAN guest's ServerPlayer closest to us (within 16 blocks).
+    // guest is nullptr when nobody is that close. Single-player / hosting worlds only.
+    void runOnNearestGuest(std::function<void(Actor* guest)> fn);
+
     // Single-player: make a change on our ServerPlayer (the real inventory), then the same change
     // on our LocalPlayer (the copy the hotbar shows - the server doesn't resend slots it didn't
     // change itself). serverFn returns false when it changed nothing; clientFn is then skipped.

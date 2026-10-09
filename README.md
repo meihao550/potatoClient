@@ -13,6 +13,18 @@ Horion 風の内部 (DLL) クライアントを一から作って、チートク
 
 ## How to use
 
+### 0. インストーラで入れる（ビルドしない一般向け）
+1. [Actions のページ](https://github.com/meihao550/potatoClient/actions/workflows/build.yml) の最新の成功した実行から、Artifacts の **`potatoclient-setup`** をダウンロードして展開する（GitHub へのログインが必要です）
+2. `PotatoClient-Setup.exe` を実行する（管理者権限は不要で、`%LOCALAPPDATA%\Programs\PotatoClient` に入ります）
+   - 署名のない exe なので、SmartScreen の「Windows によって PC が保護されました」やウイルス対策ソフトの警告が出ることがあります。必ずこのリポジトリから入手したものを使ってください
+3. マイクラを起動して**シングルプレイのワールドに入り**、スタートメニューの **「PotatoClient Injector」** を実行する
+4. 操作は下の「4. 操作」を見てください。アンインストールは「設定 > アプリ」から
+
+自分でインストーラを作るときは、Visual Studio と [Inno Setup 6](https://jrsoftware.org/isinfo.php)（`winget install JRSoftware.InnoSetup`）を入れて次を実行します。`installer\Output\PotatoClient-Setup.exe` ができます。
+```
+powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
+```
+
 ### 1. 必要なもの
 どの方法でも必要なもの:
 - Windows 10 / 11 (x64)

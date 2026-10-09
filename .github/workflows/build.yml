@@ -25,3 +25,15 @@ jobs:
             build/Release/client.dll
             build/Release/client.pdb
             build/Release/injector.exe
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer/PotatoClient.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: potatoclient-setup
+          path: installer/Output/PotatoClient-Setup.exe
